@@ -19,12 +19,15 @@ import {
   type SitioEstatus,
   type SitioEstatusFinal,
   type Foto,
+  type Interaccion,
+  type InteraccionTipo,
 } from "@/integrations/supabase/client";
 import {
   ESTATUS_COLOR,
   ESTATUS_LABEL,
   ESTATUS_OPTIONS,
 } from "@/lib/sitio-utils";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sitios/$sitioId")({
