@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, MapIcon, Bell, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import cemexLogo from "@/assets/cemex-logo.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -95,10 +96,12 @@ function AuthLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-sm">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <Link to="/map" className="flex items-center gap-2">
-            <MapIcon className="h-5 w-5" />
+          <Link to="/map" className="flex items-center gap-2.5">
+            <div className="bg-white rounded-md px-2 py-1 flex items-center">
+              <img src={cemexLogo} alt="CEMEX" className="h-5 object-contain" />
+            </div>
             <div className="leading-tight">
-              <div className="font-bold text-sm">CEMEX Sites</div>
+              <div className="font-bold text-sm">Sites</div>
               <div className="text-[10px] opacity-80 uppercase tracking-wide">
                 {profile?.role ?? "vendedor"}
               </div>
