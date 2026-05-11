@@ -40,10 +40,12 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-2xl mb-3">
-            C
-          </div>
-          <h1 className="text-2xl font-bold">CEMEX Sites</h1>
+          <img
+            src={cemexLogo}
+            alt="CEMEX"
+            className="h-14 mx-auto mb-4 object-contain"
+          />
+          <h1 className="text-2xl font-bold">Sites</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Tablero de Prospección — Jalisco
           </p>
