@@ -54,3 +54,31 @@ export interface Foto {
   storage_path: string;
   created_at: string;
 }
+
+export type InteraccionTipo =
+  | "llamada"
+  | "visita"
+  | "whatsapp"
+  | "cotizacion"
+  | "muestra"
+  | "otro";
+
+export interface Interaccion {
+  id: string;
+  sitio_id: string;
+  vendedor_id: string | null;
+  tipo: InteraccionTipo;
+  resultado: string | null;
+  notas: string | null;
+  fecha: string;
+}
+
+export interface Alerta {
+  id: string;
+  usuario_id: string;
+  sitio_id: string | null;
+  tipo: string;
+  mensaje: string | null;
+  leida: boolean;
+  created_at: string;
+}

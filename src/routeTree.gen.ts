@@ -13,6 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAlertasRouteImport } from './routes/_authenticated/alertas'
 import { Route as AuthenticatedSitiosNuevoRouteImport } from './routes/_authenticated/sitios.nuevo'
 import { Route as AuthenticatedSitiosSitioIdRouteImport } from './routes/_authenticated/sitios.$sitioId'
 
@@ -35,6 +37,16 @@ const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   path: '/map',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAlertasRoute = AuthenticatedAlertasRouteImport.update({
+  id: '/alertas',
+  path: '/alertas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSitiosNuevoRoute =
   AuthenticatedSitiosNuevoRouteImport.update({
     id: '/sitios/nuevo',
@@ -51,6 +63,8 @@ const AuthenticatedSitiosSitioIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/alertas': typeof AuthenticatedAlertasRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
   '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
@@ -58,6 +72,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/alertas': typeof AuthenticatedAlertasRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
   '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
@@ -67,20 +83,38 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/alertas': typeof AuthenticatedAlertasRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/_authenticated/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/map' | '/sitios/$sitioId' | '/sitios/nuevo'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/alertas'
+    | '/dashboard'
+    | '/map'
+    | '/sitios/$sitioId'
+    | '/sitios/nuevo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/map' | '/sitios/$sitioId' | '/sitios/nuevo'
+  to:
+    | '/'
+    | '/login'
+    | '/alertas'
+    | '/dashboard'
+    | '/map'
+    | '/sitios/$sitioId'
+    | '/sitios/nuevo'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/alertas'
+    | '/_authenticated/dashboard'
     | '/_authenticated/map'
     | '/_authenticated/sitios/$sitioId'
     | '/_authenticated/sitios/nuevo'
@@ -122,6 +156,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMapRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/alertas': {
+      id: '/_authenticated/alertas'
+      path: '/alertas'
+      fullPath: '/alertas'
+      preLoaderRoute: typeof AuthenticatedAlertasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/sitios/nuevo': {
       id: '/_authenticated/sitios/nuevo'
       path: '/sitios/nuevo'
@@ -140,12 +188,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAlertasRoute: typeof AuthenticatedAlertasRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSitiosSitioIdRoute: typeof AuthenticatedSitiosSitioIdRoute
   AuthenticatedSitiosNuevoRoute: typeof AuthenticatedSitiosNuevoRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAlertasRoute: AuthenticatedAlertasRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSitiosSitioIdRoute: AuthenticatedSitiosSitioIdRoute,
   AuthenticatedSitiosNuevoRoute: AuthenticatedSitiosNuevoRoute,

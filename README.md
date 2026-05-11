@@ -10,30 +10,30 @@ App mobile-first para que el equipo de ventas (Jalisco) registre sitios de const
    - `vendedor@cemex-demo.mx` — pwd: `Demo1234!`
    - `gerente@cemex-demo.mx` — pwd: `Demo1234!`
    - `head@cemex-demo.mx` — pwd: `Demo1234!`
-4. Vuelve al SQL Editor y vuelve a correr el bloque final del `schema.sql` (el `do $$ ... $$` que asigna roles y siembra sitios). Ya con los usuarios existentes, las asignaciones se aplican.
-5. En **Authentication → URL Configuration** agrega tu URL de preview a *Redirect URLs* (opcional para magic links; no necesario para email/password).
+4. Vuelve al SQL Editor y vuelve a correr el bloque final del `schema.sql` (el `do $$ ... $$` que asigna roles y siembra sitios).
+5. Ejecuta `supabase/schema_v2.sql` para activar **bitácora con RLS**, **alertas por volumen**, **audit log** y **cron de auto-inactivación**.
 
 ## Mapbox
 
-La primera vez que entres al mapa te pedirá pegar tu **token público de Mapbox** (`pk.eyJ...`). Se guarda en `localStorage` del navegador. Obtén uno gratis en https://account.mapbox.com/access-tokens/.
+La primera vez que entres al mapa te pedirá pegar tu **token público de Mapbox** (`pk.eyJ...`). Se guarda en `localStorage`. Obtén uno gratis en https://account.mapbox.com/access-tokens/.
 
-## Flujo MVP
+## Funcionalidad
 
-Login → Mapa con pins (color por estatus) → botón **+** → captura GPS + foto → guarda → aparece pin → tap pin → detalle/edición/cierre.
+- **Mapa** con pins por estatus + filtros (estatus, volumen).
+- **Crear sitio** con GPS + foto + ajuste manual del pin.
+- **Detalle** del sitio: editar, fotos, **bitácora** (llamada/visita/WhatsApp/cotización/muestra) y cierre (ganado / perdido / pospuesto / inactivo).
+- **Alertas** en tiempo real:
+  - Volumen ≥ 1,000 m³ → notifica al vendedor y al gerente de la zona.
+  - Inactividad ≥ 14 días sin interacción → alerta al vendedor.
+  - Inactividad ≥ 30 días → auto-marca como `inactivo` (cron diario 09:00 UTC).
+- **Tablero** con KPIs (pipeline, ganados, win rate), barra de pipeline por estatus, ranking por vendedor (gerente/head) y export **CSV**.
+- **Audit log** con triggers en `sitios` e `interacciones` (visible para gerente/head).
 
 ## Roles
 
 | Rol | Ve |
 |---|---|
-| `vendedor` | sus sitios + sin asignar de su zona |
-| `gerente` | todos los de su zona |
-| `head` | todos |
+| `vendedor` | sus sitios + sin asignar de su zona; sus alertas; tablero personal |
+| `gerente` | todos los de su zona; ranking de su equipo |
+| `head` | todos los sitios y todos los vendedores |
 
-## Próxima iteración (no incluido todavía)
-
-- Bitácora de interacciones por sitio
-- Alertas por volumen (500–1k → gerente, 5k+ → head) y por inactividad
-- Dashboards por rol
-- Cron de auto-inactivación a 45 días
-- Audit log con triggers
-- Export a Excel
