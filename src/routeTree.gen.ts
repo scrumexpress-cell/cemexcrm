@@ -9,38 +9,105 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
+import { Route as AuthenticatedSitiosNuevoRouteImport } from './routes/_authenticated/sitios.nuevo'
+import { Route as AuthenticatedSitiosSitioIdRouteImport } from './routes/_authenticated/sitios.$sitioId'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSitiosNuevoRoute =
+  AuthenticatedSitiosNuevoRouteImport.update({
+    id: '/sitios/nuevo',
+    path: '/sitios/nuevo',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSitiosSitioIdRoute =
+  AuthenticatedSitiosSitioIdRouteImport.update({
+    id: '/sitios/$sitioId',
+    path: '/sitios/$sitioId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/map': typeof AuthenticatedMapRoute
+  '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
+  '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/map': typeof AuthenticatedMapRoute
+  '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
+  '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/map': typeof AuthenticatedMapRoute
+  '/_authenticated/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
+  '/_authenticated/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/login' | '/map' | '/sitios/$sitioId' | '/sitios/nuevo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/login' | '/map' | '/sitios/$sitioId' | '/sitios/nuevo'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/map'
+    | '/_authenticated/sitios/$sitioId'
+    | '/_authenticated/sitios/nuevo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +115,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/map': {
+      id: '/_authenticated/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof AuthenticatedMapRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sitios/nuevo': {
+      id: '/_authenticated/sitios/nuevo'
+      path: '/sitios/nuevo'
+      fullPath: '/sitios/nuevo'
+      preLoaderRoute: typeof AuthenticatedSitiosNuevoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sitios/$sitioId': {
+      id: '/_authenticated/sitios/$sitioId'
+      path: '/sitios/$sitioId'
+      fullPath: '/sitios/$sitioId'
+      preLoaderRoute: typeof AuthenticatedSitiosSitioIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedMapRoute: typeof AuthenticatedMapRoute
+  AuthenticatedSitiosSitioIdRoute: typeof AuthenticatedSitiosSitioIdRoute
+  AuthenticatedSitiosNuevoRoute: typeof AuthenticatedSitiosNuevoRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedMapRoute: AuthenticatedMapRoute,
+  AuthenticatedSitiosSitioIdRoute: AuthenticatedSitiosSitioIdRoute,
+  AuthenticatedSitiosNuevoRoute: AuthenticatedSitiosNuevoRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
