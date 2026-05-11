@@ -306,6 +306,79 @@ function SitioDetailPage() {
         )}
       </div>
 
+      {/* Bitácora */}
+      <div className="mt-6">
+        <h3 className="font-semibold mb-2">Bitácora</h3>
+        {!sitio.estatus_final && (
+          <div className="bg-card border rounded-xl p-4 space-y-3 mb-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={intTipo} onValueChange={(v) => setIntTipo(v as InteraccionTipo)}>
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPO_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Resultado"
+                value={intResultado}
+                onChange={(e) => setIntResultado(e.target.value)}
+                className="h-12"
+              />
+            </div>
+            <Textarea
+              placeholder="Notas (opcional)"
+              value={intNotas}
+              onChange={(e) => setIntNotas(e.target.value)}
+              rows={2}
+            />
+            <Button
+              onClick={addInteraccion}
+              disabled={intSaving}
+              className="w-full h-11"
+            >
+              Registrar interacción
+            </Button>
+          </div>
+        )}
+        {interacciones.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Aún no hay interacciones registradas.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {interacciones.map((i) => (
+              <li key={i.id} className="bg-card border rounded-lg p-3 text-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded font-semibold">
+                    {TIPO_OPTIONS.find((t) => t.value === i.tipo)?.label ?? i.tipo}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {new Date(i.fecha).toLocaleString("es-MX", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                {i.resultado && <div className="font-medium">{i.resultado}</div>}
+                {i.notas && (
+                  <p className="text-muted-foreground text-xs mt-1 whitespace-pre-wrap">
+                    {i.notas}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {!sitio.estatus_final && (
         <div className="mt-6">
           {!showClose ? (
