@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, MapIcon, Bell, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import cemexLogo from "@/assets/cemex-logo.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
