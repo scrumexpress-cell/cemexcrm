@@ -54,6 +54,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           content:
             "Registro y seguimiento de sitios de construcción en Jalisco para el equipo CEMEX.",
         },
+        { property: "og:title", content: "CEMEX Sites — Tablero de Prospección" },
+        { name: "twitter:title", content: "CEMEX Sites — Tablero de Prospección" },
+        { name: "description", content: "CEMEX Sites Hub is a mobile-first web app for sales teams to track construction sites." },
+        { property: "og:description", content: "CEMEX Sites Hub is a mobile-first web app for sales teams to track construction sites." },
+        { name: "twitter:description", content: "CEMEX Sites Hub is a mobile-first web app for sales teams to track construction sites." },
+        { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d3d1aad2-a2cd-4214-af4d-31ced4861d3e/id-preview-9900865e--b7cd507b-6400-40d4-993a-cd1db84e4763.lovable.app-1778530957703.png" },
+        { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d3d1aad2-a2cd-4214-af4d-31ced4861d3e/id-preview-9900865e--b7cd507b-6400-40d4-993a-cd1db84e4763.lovable.app-1778530957703.png" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { property: "og:type", content: "website" },
       ],
       links: [
         { rel: "stylesheet", href: appCss },
