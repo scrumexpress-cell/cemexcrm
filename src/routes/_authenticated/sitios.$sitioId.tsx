@@ -41,6 +41,15 @@ const FINAL_OPTIONS: { value: SitioEstatusFinal; label: string }[] = [
   { value: "inactivo", label: "Inactivo" },
 ];
 
+const TIPO_OPTIONS: { value: InteraccionTipo; label: string }[] = [
+  { value: "llamada", label: "Llamada" },
+  { value: "visita", label: "Visita" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "cotizacion", label: "Cotización" },
+  { value: "muestra", label: "Muestra" },
+  { value: "otro", label: "Otro" },
+];
+
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
