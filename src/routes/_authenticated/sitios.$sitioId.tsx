@@ -53,8 +53,10 @@ const TIPO_OPTIONS: { value: InteraccionTipo; label: string }[] = [
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
+  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -70,6 +72,12 @@ function SitioDetailPage() {
   const [motivo, setMotivo] = useState("");
   const [competidor, setCompetidor] = useState("");
 
+  // bitácora
+  const [intTipo, setIntTipo] = useState<InteraccionTipo>("llamada");
+  const [intResultado, setIntResultado] = useState("");
+  const [intNotas, setIntNotas] = useState("");
+  const [intSaving, setIntSaving] = useState(false);
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,9 +85,14 @@ function SitioDetailPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: s }, { data: fs }] = await Promise.all([
+    const [{ data: s }, { data: fs }, { data: ints }] = await Promise.all([
       supabase.from("sitios").select("*").eq("id", sitioId).maybeSingle(),
       supabase.from("fotos").select("*").eq("sitio_id", sitioId),
+      supabase
+        .from("interacciones")
+        .select("*")
+        .eq("sitio_id", sitioId)
+        .order("fecha", { ascending: false }),
     ]);
     if (s) {
       const sitio = s as Sitio;
@@ -97,7 +110,26 @@ function SitioDetailPage() {
       }));
       setFotos(withUrls);
     }
+    setInteracciones((ints as Interaccion[]) ?? []);
     setLoading(false);
+  }
+
+  async function addInteraccion() {
+    if (!sitio || !user) return;
+    setIntSaving(true);
+    const { error } = await supabase.from("interacciones").insert({
+      sitio_id: sitio.id,
+      vendedor_id: user.id,
+      tipo: intTipo,
+      resultado: intResultado || null,
+      notas: intNotas || null,
+    });
+    setIntSaving(false);
+    if (error) return toast.error(error.message);
+    setIntResultado("");
+    setIntNotas("");
+    toast.success("Interacción registrada");
+    void load();
   }
 
   async function saveEdits() {
