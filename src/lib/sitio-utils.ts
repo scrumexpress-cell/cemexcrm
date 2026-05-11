@@ -8,10 +8,10 @@ export const ESTATUS_LABEL: Record<SitioEstatus, string> = {
 };
 
 export const ESTATUS_COLOR: Record<SitioEstatus, string> = {
-  prospecto: "#3B82F6", // blue
-  competidor_presente: "#EF4444", // red
-  en_proceso: "#10B981", // green
-  movimiento_de_tierra: "#FFB81C", // CEMEX yellow
+  prospecto: "#1F2A93", // CEMEX blue
+  competidor_presente: "#E1251B", // CEMEX red
+  en_proceso: "#10B981", // green (functional)
+  movimiento_de_tierra: "#F59E0B", // amber (functional)
 };
 
 export const ESTATUS_OPTIONS: SitioEstatus[] = [
