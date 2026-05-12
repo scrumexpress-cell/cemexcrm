@@ -38,7 +38,20 @@ function NuevoSitioPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    captureGps();
+    // Solo intentar GPS automáticamente si el permiso ya fue concedido
+    if (!navigator.geolocation) return;
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" as PermissionName })
+        .then((status) => {
+          if (status.state === "granted") captureGps();
+          else if (status.state === "prompt") captureGps();
+          // si está "denied" no hacemos nada para no spammear errores
+        })
+        .catch(() => captureGps());
+    } else {
+      captureGps();
+    }
   }, []);
 
   function captureGps() {
@@ -55,7 +68,21 @@ function NuevoSitioPage() {
       },
       (err) => {
         setGpsLoading(false);
-        toast.error(`No se pudo capturar GPS: ${err.message}`);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error(
+            "Permiso de ubicación denegado. Habilítalo en los ajustes del navegador o toca el mapa para fijar la ubicación manualmente.",
+            { duration: 6000 },
+          );
+          // Centrar mapa en una ubicación por defecto (CDMX) para permitir tap manual
+          setCoords((c) => c ?? { lng: -99.1332, lat: 19.4326 });
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          toast.error("Ubicación no disponible. Toca el mapa para fijarla manualmente.");
+          setCoords((c) => c ?? { lng: -99.1332, lat: 19.4326 });
+        } else if (err.code === err.TIMEOUT) {
+          toast.error("Tiempo agotado al obtener GPS. Inténtalo de nuevo.");
+        } else {
+          toast.error(`No se pudo capturar GPS: ${err.message}`);
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
