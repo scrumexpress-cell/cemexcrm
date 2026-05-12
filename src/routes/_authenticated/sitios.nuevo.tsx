@@ -46,7 +46,11 @@ function NuevoSitioPage() {
         .then((status) => {
           if (status.state === "granted") captureGps();
           else if (status.state === "prompt") captureGps();
-          // si está "denied" no hacemos nada para no spammear errores
+          else {
+            // denied: mostrar mapa con ubicación por defecto, sin error
+            setCoords({ lng: -99.1332, lat: 19.4326 });
+            toast.info("Toca el mapa o arrastra el pin para fijar la ubicación", { duration: 5000 });
+          }
         })
         .catch(() => captureGps());
     } else {
