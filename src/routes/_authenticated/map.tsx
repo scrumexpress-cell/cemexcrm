@@ -44,11 +44,12 @@ export const Route = createFileRoute("/_authenticated/map")({
 
 function MapPage() {
   const { user, profile } = useAuth();
-  const [sitios, setSitios] = useState<Sitio[]>([]);
+  const [sitios, setSitios] = useState<SitioConVendedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
   const [filterVolumen, setFilterVolumen] = useState<string>("all");
-  const [selected, setSelected] = useState<Sitio | null>(null);
+  const [filterOwner, setFilterOwner] = useState<string>("all");
+  const [selected, setSelected] = useState<SitioConVendedor | null>(null);
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,13 +77,13 @@ function MapPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("sitios")
-      .select("*")
+      .select("*, vendedor:vendedor_id(nombre,email)")
       .is("estatus_final", null)
       .order("created_at", { ascending: false });
     if (error) {
       toast.error(`Error al cargar sitios: ${error.message}`);
     } else {
-      setSitios((data as Sitio[]) ?? []);
+      setSitios((data as unknown as SitioConVendedor[]) ?? []);
     }
     setLoading(false);
   }
@@ -90,6 +91,8 @@ function MapPage() {
   const filtered = useMemo(() => {
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
+      if (filterOwner === "mine" && s.vendedor_id !== user?.id) return false;
+      if (filterOwner === "others" && s.vendedor_id === user?.id) return false;
       if (filterVolumen !== "all") {
         const v = s.volumen_m3 ?? 0;
         if (filterVolumen === "0-499" && !(v < 500)) return false;
@@ -100,7 +103,18 @@ function MapPage() {
       }
       return true;
     });
-  }, [sitios, filterEstatus, filterVolumen]);
+  }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
+
+  // Nearby existing sitio (within 80 m) while placing — to prevent duplicates
+  const nearbyExisting = useMemo(() => {
+    if (!placeCoords) return null;
+    let best: { sitio: SitioConVendedor; d: number } | null = null;
+    for (const s of sitios) {
+      const d = distMeters(placeCoords, { lat: s.lat, lng: s.lng });
+      if (d <= 80 && (!best || d < best.d)) best = { sitio: s, d };
+    }
+    return best;
+  }, [placeCoords, sitios]);
 
   function startPlacing() {
     setSelected(null);
