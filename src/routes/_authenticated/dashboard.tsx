@@ -235,7 +235,26 @@ function DashboardPage() {
     return [...map.values()].sort((a, b) => b.ingreso - a.ingreso).slice(0, 5);
   }, [sitios, precio]);
 
-  function exportCsv() {
+  // Licitaciones: obras con 2+ sitios (varios licitantes)
+  const licitaciones = useMemo(() => {
+    const sitiosPorObra = new Map<string, SitioConProfile[]>();
+    sitios.forEach((s) => {
+      if (!s.obra_id) return;
+      const arr = sitiosPorObra.get(s.obra_id) ?? [];
+      arr.push(s);
+      sitiosPorObra.set(s.obra_id, arr);
+    });
+    return obras
+      .map((o) => {
+        const items = sitiosPorObra.get(o.id) ?? [];
+        if (items.length < 2) return null;
+        const m3 = items.reduce((a, s) => a + (Number(s.volumen_m3) || 0), 0);
+        const ganador = items.find((s) => s.id === o.ganador_sitio_id) ?? null;
+        return { obra: o, items, m3, ganador };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.m3 - a.m3);
+  }, [obras, sitios]);
     const headers = ["mes", "nuevos", "ganados", "perdidos", "m3_ganado", "ingreso_mxn"];
     const rows = serieMes.map((r) => [
       r.mes,
