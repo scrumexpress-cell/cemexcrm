@@ -251,17 +251,15 @@ export function MapView({
         if (rect) {
           const offsetX = event.clientX - rect.left - rect.width / 2;
           const offsetY = event.clientY - rect.top - rect.height / 2;
-          const centerWorldNew = lngLatToWorld(viewCenter[0], viewCenter[1], newZoom);
-          const pointWorldX = centerWorldNew.x + offsetX;
-          const pointWorldY = centerWorldNew.y + offsetY;
-          // Keep cursor point stationary
-          const ratio = 2 ** (newZoom - viewZoom);
-          const newCenterX = pointWorldX - offsetX * ratio / ratio; // simplifies; keep anchored
-          // Actually simpler: re-anchor by translating center so cursor stays
-          const next = worldToLngLat(pointWorldX - offsetX, pointWorldY - offsetY, newZoom);
+          const cursor = worldToLngLat(
+            centerWorld.x + offsetX,
+            centerWorld.y + offsetY,
+            viewZoom,
+          );
+          const cursorAtNew = lngLatToWorld(cursor.lng, cursor.lat, newZoom);
+          const next = worldToLngLat(cursorAtNew.x - offsetX, cursorAtNew.y - offsetY, newZoom);
           setViewZoom(newZoom);
           setViewCenter([next.lng, next.lat]);
-          void newCenterX;
         } else {
           setViewZoom(newZoom);
         }
