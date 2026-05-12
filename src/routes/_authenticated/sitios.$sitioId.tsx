@@ -277,6 +277,10 @@ function SitioDetailPage() {
       </div>
 
       <div className="mt-6">
+        <ObraPanel sitio={sitio} onChanged={() => void load()} />
+      </div>
+
+      <div className="mt-6">
         <h3 className="font-semibold mb-2">Fotos</h3>
         <div className="grid grid-cols-3 gap-2 mb-3">
           {fotos.map((f) => (
