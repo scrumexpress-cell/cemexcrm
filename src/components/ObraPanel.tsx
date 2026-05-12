@@ -159,11 +159,12 @@ export function ObraPanel({ sitio, onChanged }: Props) {
       .update({
         estatus: "perdida",
         motivo_cierre: closeMotivo || null,
+        competidor_ganador: competidorGanador.trim() || null,
       })
       .eq("id", obra.id);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Licitación cerrada como perdida");
+    toast.success("Licitación cerrada — ganador externo");
     onChanged();
   }
 
