@@ -100,6 +100,7 @@ function SitioDetailPage() {
       const sitio = s as Sitio;
       setSitio(sitio);
       setNombre(sitio.nombre_referencia ?? "");
+      setLicitante(sitio.licitante ?? "");
       setDireccion(sitio.direccion ?? "");
       setEstatus(sitio.estatus);
       setVolumen(sitio.volumen_m3?.toString() ?? "");
