@@ -255,6 +255,8 @@ function DashboardPage() {
       .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => b.m3 - a.m3);
   }, [obras, sitios]);
+
+  function exportCsv() {
     const headers = ["mes", "nuevos", "ganados", "perdidos", "m3_ganado", "ingreso_mxn"];
     const rows = serieMes.map((r) => [
       r.mes,
