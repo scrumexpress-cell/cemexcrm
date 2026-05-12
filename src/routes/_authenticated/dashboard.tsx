@@ -89,7 +89,9 @@ function DashboardPage() {
     setEnriching(true);
     try {
       const res = await enrichExistingDemoData(user);
-      toast.success(`Datos demo redistribuidos: ${res.updated} sitios, ${res.interacciones} interacciones`);
+      toast.success(
+        `Datos demo: ${res.updated} sitios · ${res.interacciones} interacciones · ${res.obras} licitaciones · ${res.alertas} alertas`,
+      );
       await load();
     } catch (e) {
       toast.error((e as Error).message);
