@@ -258,7 +258,8 @@ async function seedInteracciones(user: User, rows: InsertedRow[]) {
   return interacciones.length;
 }
 
-async function seedObras(user: User, rows: InsertedRow[]) {
+async function seedObras(user: User, rows: InsertedRow[], capabilities?: SitiosCapabilities) {
+  if (!capabilities?.hasObraId) return 0;
   const groups = new Map<string, InsertedRow[]>();
   rows.forEach((r) => {
     if (!r.obraTag) return;
@@ -334,7 +335,7 @@ export async function seedSampleSitios({ user, zonaId }: SeedInput) {
   const capabilities = await detectSitiosCapabilities();
   const rows = await insertSitios(user, zonaId, capabilities);
   await seedInteracciones(user, rows);
-  await seedObras(user, rows);
+  await seedObras(user, rows, capabilities);
   await seedAlertasInactividad(user, rows);
   return rows;
 }
@@ -368,7 +369,7 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
   const capabilities = await detectSitiosCapabilities();
   const rows = await insertSitios(user, zonaId, capabilities);
   const interacciones = await seedInteracciones(user, rows);
-  const obras = await seedObras(user, rows);
+  const obras = await seedObras(user, rows, capabilities);
   const alertas = await seedAlertasInactividad(user, rows);
   return { sitios: rows.length, interacciones, obras, alertas };
 }
