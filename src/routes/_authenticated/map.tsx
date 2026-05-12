@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Check, Crosshair } from "lucide-react";
+import { Plus, X, Check, Crosshair, Sparkles } from "lucide-react";
 import { MapView } from "@/components/MapView";
 import { NewSitioDialog } from "@/components/NewSitioDialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { seedSampleSitios } from "@/lib/seed-sitios";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -25,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/map")({
 });
 
 function MapPage() {
+  const { user, profile } = useAuth();
   const [sitios, setSitios] = useState<Sitio[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
@@ -33,6 +36,21 @@ function MapPage() {
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function handleSeed() {
+    if (!user) return;
+    setSeeding(true);
+    try {
+      await seedSampleSitios({ user, zonaId: profile?.zona_id ?? null });
+      toast.success("10 sitios de ejemplo cargados");
+      await load();
+    } catch (e) {
+      toast.error(`Error al sembrar: ${(e as Error).message}`);
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -134,6 +152,18 @@ function MapPage() {
             <SelectItem value="5000+">5,000+ m³</SelectItem>
           </SelectContent>
         </Select>
+        {!loading && sitios.length === 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+            onClick={handleSeed}
+            disabled={seeding}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {seeding ? "Cargando..." : "10 ejemplos"}
+          </Button>
+        )}
         <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
           {loading ? "..." : `${filtered.length} sitios`}
         </div>
