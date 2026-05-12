@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ObraPanel } from "@/components/ObraPanel";
 import {
   Select,
   SelectContent,
@@ -274,6 +275,10 @@ function SitioDetailPage() {
         >
           Guardar cambios
         </Button>
+      </div>
+
+      <div className="mt-6">
+        <ObraPanel sitio={sitio} onChanged={() => void load()} />
       </div>
 
       <div className="mt-6">
