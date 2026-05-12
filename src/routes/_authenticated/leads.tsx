@@ -249,6 +249,18 @@ function LeadsPage() {
                                       {s.estatus_final}
                                     </Badge>
                                   )}
+                                  {!s.estatus_final && (() => {
+                                    const d = diasSinSeguimiento(s);
+                                    if (d < 7) return null;
+                                    const tone = d >= 30 ? "bg-red-100 text-red-700 border-red-200"
+                                      : d >= 14 ? "bg-amber-100 text-amber-700 border-amber-200"
+                                      : "bg-muted text-muted-foreground";
+                                    return (
+                                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 gap-0.5 ${tone}`}>
+                                        <AlertTriangle className="h-2.5 w-2.5" /> {d}d
+                                      </Badge>
+                                    );
+                                  })()}
                                   <span className="text-[10px] text-muted-foreground ml-auto truncate max-w-[100px]">
                                     {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
                                   </span>
