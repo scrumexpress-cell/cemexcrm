@@ -120,7 +120,7 @@ function AuthLayout() {
           </Button>
         </div>
       </header>
-      <main className="flex-1 flex flex-col pb-16">
+      <main className="flex-1 flex flex-col pb-16 min-h-0 overflow-auto">
         <Outlet />
       </main>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
