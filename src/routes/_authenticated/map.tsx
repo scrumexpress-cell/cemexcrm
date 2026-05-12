@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Check, Crosshair } from "lucide-react";
+import { Plus, X, Check, Crosshair, Sparkles } from "lucide-react";
 import { MapView } from "@/components/MapView";
 import { NewSitioDialog } from "@/components/NewSitioDialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { seedSampleSitios } from "@/lib/seed-sitios";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
