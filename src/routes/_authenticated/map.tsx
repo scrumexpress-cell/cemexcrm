@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/map")({
 });
 
 function MapPage() {
+  const { user, profile } = useAuth();
   const [sitios, setSitios] = useState<Sitio[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
@@ -35,6 +36,21 @@ function MapPage() {
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function handleSeed() {
+    if (!user) return;
+    setSeeding(true);
+    try {
+      await seedSampleSitios({ user, zonaId: profile?.zona_id ?? null });
+      toast.success("10 sitios de ejemplo cargados");
+      await load();
+    } catch (e) {
+      toast.error(`Error al sembrar: ${(e as Error).message}`);
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   useEffect(() => {
     void load();
