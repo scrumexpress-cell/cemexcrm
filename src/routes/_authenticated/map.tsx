@@ -327,7 +327,7 @@ function MapPage() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
             <Badge
               style={{
                 backgroundColor: ESTATUS_COLOR[selected.estatus],
@@ -341,7 +341,25 @@ function MapPage() {
                 {selected.volumen_m3.toLocaleString()} m³
               </Badge>
             )}
+            {selected.vendedor_id === user?.id ? (
+              <Badge className="bg-accent text-accent-foreground">
+                Tú llevas este lead
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                Asignado a{" "}
+                {selected.vendedor?.nombre ??
+                  selected.vendedor?.email ??
+                  "otro vendedor"}
+              </Badge>
+            )}
           </div>
+          {selected.vendedor_id !== user?.id && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Solo el vendedor asignado puede dar seguimiento a esta
+              oportunidad.
+            </p>
+          )}
           <Link
             to="/sitios/$sitioId"
             params={{ sitioId: selected.id }}
