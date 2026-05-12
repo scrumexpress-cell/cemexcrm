@@ -241,11 +241,21 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm">
+          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm space-y-1">
             <div className="font-medium">Ubica el nuevo sitio</div>
             <div className="text-xs text-muted-foreground">
               Toca el mapa o arrastra el pin azul para fijar el punto.
             </div>
+            {nearbyExisting && (
+              <div className="text-xs text-destructive font-medium">
+                ⚠ Ya hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
+                {nearbyExisting.sitio.vendedor_id === user?.id
+                  ? "ti"
+                  : (nearbyExisting.sitio.vendedor?.nombre ??
+                    nearbyExisting.sitio.vendedor?.email ??
+                    "otro vendedor")}
+              </div>
+            )}
           </div>
         )}
 
