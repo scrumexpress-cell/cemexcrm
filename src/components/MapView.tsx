@@ -116,7 +116,12 @@ export function MapView({
   if (tokenMissing) {
     return <MapboxTokenPrompt onSaved={() => setTokenMissing(false)} />;
   }
-  return <div ref={containerRef} className={className ?? "h-full min-h-[320px] w-full"} />;
+  return (
+    <div
+      ref={containerRef}
+      className={["h-full min-h-[320px] w-full", className].filter(Boolean).join(" ")}
+    />
+  );
 }
 
 function MapboxTokenPrompt({ onSaved }: { onSaved: () => void }) {
