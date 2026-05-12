@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMapboxToken } from "@/lib/mapbox-token";
-import { ESTATUS_COLOR, ESTATUS_LABEL } from "@/lib/sitio-utils";
+import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
