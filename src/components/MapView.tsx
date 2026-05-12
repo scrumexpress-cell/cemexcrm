@@ -12,6 +12,7 @@ interface Props {
   className?: string;
   draggableMarker?: { lng: number; lat: number };
   onMarkerDrag?: (lng: number, lat: number) => void;
+  currentUserId?: string | null;
 }
 
 const GDL: [number, number] = [-103.3496, 20.6597];
@@ -46,6 +47,7 @@ export function MapView({
   className,
   draggableMarker,
   onMarkerDrag,
+  currentUserId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; center: [number, number]; moved: boolean } | null>(null);
@@ -170,12 +172,18 @@ export function MapView({
 
       {sitios.map((sitio) => {
         const position = markerPosition(sitio.lng, sitio.lat);
+        const isMine =
+          currentUserId != null && sitio.vendedor_id === currentUserId;
         return (
           <button
             key={sitio.id}
             type="button"
             aria-label={sitio.nombre_referencia ?? "Sitio"}
-            className="absolute h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card shadow-md"
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md ${
+              isMine
+                ? "h-[20px] w-[20px] border-[3px] border-accent ring-2 ring-accent/40"
+                : "h-[18px] w-[18px] border-2 border-card opacity-90"
+            }`}
             style={{
               left: position.left,
               top: position.top,

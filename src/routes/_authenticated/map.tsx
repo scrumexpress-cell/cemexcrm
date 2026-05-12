@@ -15,6 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase, type Sitio } from "@/integrations/supabase/client";
+
+type SitioConVendedor = Sitio & {
+  vendedor: { nombre: string | null; email: string | null } | null;
+};
+
+// Approx. meters between two coords (haversine)
+function distMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
 import {
   ESTATUS_COLOR,
   ESTATUS_LABEL,
@@ -28,11 +44,12 @@ export const Route = createFileRoute("/_authenticated/map")({
 
 function MapPage() {
   const { user, profile } = useAuth();
-  const [sitios, setSitios] = useState<Sitio[]>([]);
+  const [sitios, setSitios] = useState<SitioConVendedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
   const [filterVolumen, setFilterVolumen] = useState<string>("all");
-  const [selected, setSelected] = useState<Sitio | null>(null);
+  const [filterOwner, setFilterOwner] = useState<string>("all");
+  const [selected, setSelected] = useState<SitioConVendedor | null>(null);
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -60,13 +77,13 @@ function MapPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("sitios")
-      .select("*")
+      .select("*, vendedor:vendedor_id(nombre,email)")
       .is("estatus_final", null)
       .order("created_at", { ascending: false });
     if (error) {
       toast.error(`Error al cargar sitios: ${error.message}`);
     } else {
-      setSitios((data as Sitio[]) ?? []);
+      setSitios((data as unknown as SitioConVendedor[]) ?? []);
     }
     setLoading(false);
   }
@@ -74,6 +91,8 @@ function MapPage() {
   const filtered = useMemo(() => {
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
+      if (filterOwner === "mine" && s.vendedor_id !== user?.id) return false;
+      if (filterOwner === "others" && s.vendedor_id === user?.id) return false;
       if (filterVolumen !== "all") {
         const v = s.volumen_m3 ?? 0;
         if (filterVolumen === "0-499" && !(v < 500)) return false;
@@ -84,7 +103,18 @@ function MapPage() {
       }
       return true;
     });
-  }, [sitios, filterEstatus, filterVolumen]);
+  }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
+
+  // Nearby existing sitio (within 80 m) while placing — to prevent duplicates
+  const nearbyExisting = useMemo(() => {
+    if (!placeCoords) return null;
+    let best: { sitio: SitioConVendedor; d: number } | null = null;
+    for (const s of sitios) {
+      const d = distMeters(placeCoords, { lat: s.lat, lng: s.lng });
+      if (d <= 80 && (!best || d < best.d)) best = { sitio: s, d };
+    }
+    return best;
+  }, [placeCoords, sitios]);
 
   function startPlacing() {
     setSelected(null);
@@ -121,6 +151,20 @@ function MapPage() {
       toast.error("Toca el mapa para fijar la ubicación");
       return;
     }
+    if (nearbyExisting) {
+      const owner =
+        nearbyExisting.sitio.vendedor?.nombre ??
+        nearbyExisting.sitio.vendedor?.email ??
+        "otro vendedor";
+      const isMine = nearbyExisting.sitio.vendedor_id === user?.id;
+      toast.warning(
+        `Ya hay un sitio a ${Math.round(nearbyExisting.d)} m registrado por ${
+          isMine ? "ti" : owner
+        }. Toca el pin existente para darle seguimiento.`,
+      );
+      setSelected(nearbyExisting.sitio);
+      return;
+    }
     setDialogOpen(true);
   }
 
@@ -152,6 +196,16 @@ function MapPage() {
             <SelectItem value="5000+">5,000+ m³</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filterOwner} onValueChange={setFilterOwner}>
+          <SelectTrigger className="h-9 w-[150px] shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los dueños</SelectItem>
+            <SelectItem value="mine">Solo míos</SelectItem>
+            <SelectItem value="others">De otros</SelectItem>
+          </SelectContent>
+        </Select>
         {!loading && sitios.length === 0 && (
           <Button
             size="sm"
@@ -172,7 +226,12 @@ function MapPage() {
       <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
           sitios={placing ? [] : filtered}
-          onPinClick={(s) => !placing && setSelected(s)}
+          currentUserId={user?.id ?? null}
+          onPinClick={(s) => {
+            if (placing) return;
+            const found = sitios.find((x) => x.id === s.id) ?? null;
+            setSelected(found);
+          }}
           onMapClick={(lng, lat) => {
             if (placing) setPlaceCoords({ lng, lat });
           }}
@@ -182,11 +241,21 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm">
+          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm space-y-1">
             <div className="font-medium">Ubica el nuevo sitio</div>
             <div className="text-xs text-muted-foreground">
               Toca el mapa o arrastra el pin azul para fijar el punto.
             </div>
+            {nearbyExisting && (
+              <div className="text-xs text-destructive font-medium">
+                ⚠ Ya hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
+                {nearbyExisting.sitio.vendedor_id === user?.id
+                  ? "ti"
+                  : (nearbyExisting.sitio.vendedor?.nombre ??
+                    nearbyExisting.sitio.vendedor?.email ??
+                    "otro vendedor")}
+              </div>
+            )}
           </div>
         )}
 
@@ -258,7 +327,7 @@ function MapPage() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
             <Badge
               style={{
                 backgroundColor: ESTATUS_COLOR[selected.estatus],
@@ -272,7 +341,25 @@ function MapPage() {
                 {selected.volumen_m3.toLocaleString()} m³
               </Badge>
             )}
+            {selected.vendedor_id === user?.id ? (
+              <Badge className="bg-accent text-accent-foreground">
+                Tú llevas este lead
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                Asignado a{" "}
+                {selected.vendedor?.nombre ??
+                  selected.vendedor?.email ??
+                  "otro vendedor"}
+              </Badge>
+            )}
           </div>
+          {selected.vendedor_id !== user?.id && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Solo el vendedor asignado puede dar seguimiento a esta
+              oportunidad.
+            </p>
+          )}
           <Link
             to="/sitios/$sitioId"
             params={{ sitioId: selected.id }}
