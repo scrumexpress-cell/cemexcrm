@@ -196,6 +196,16 @@ function MapPage() {
             <SelectItem value="5000+">5,000+ m³</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filterOwner} onValueChange={setFilterOwner}>
+          <SelectTrigger className="h-9 w-[150px] shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los dueños</SelectItem>
+            <SelectItem value="mine">Solo míos</SelectItem>
+            <SelectItem value="others">De otros</SelectItem>
+          </SelectContent>
+        </Select>
         {!loading && sitios.length === 0 && (
           <Button
             size="sm"
