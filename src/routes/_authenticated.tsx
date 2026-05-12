@@ -93,7 +93,7 @@ function AuthLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-sm">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/map" className="flex items-center gap-2.5">
