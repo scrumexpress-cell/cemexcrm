@@ -151,6 +151,20 @@ function MapPage() {
       toast.error("Toca el mapa para fijar la ubicación");
       return;
     }
+    if (nearbyExisting) {
+      const owner =
+        nearbyExisting.sitio.vendedor?.nombre ??
+        nearbyExisting.sitio.vendedor?.email ??
+        "otro vendedor";
+      const isMine = nearbyExisting.sitio.vendedor_id === user?.id;
+      toast.warning(
+        `Ya hay un sitio a ${Math.round(nearbyExisting.d)} m registrado por ${
+          isMine ? "ti" : owner
+        }. Toca el pin existente para darle seguimiento.`,
+      );
+      setSelected(nearbyExisting.sitio);
+      return;
+    }
     setDialogOpen(true);
   }
 
