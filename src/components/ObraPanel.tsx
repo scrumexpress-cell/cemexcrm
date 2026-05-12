@@ -325,31 +325,43 @@ export function ObraPanel({ sitio, onChanged }: Props) {
 
       <div>
         <div className="text-xs font-medium mb-1">
-          Registros vinculados ({hermanos.length})
+          Licitantes registrados ({hermanos.length})
         </div>
         <ul className="space-y-1">
           {hermanos.map((h) => {
             const isThis = h.id === sitio.id;
             const isWinner = obra.ganador_sitio_id === h.id;
+            const vendedorNombre =
+              h.vendedor?.nombre ?? h.vendedor?.email ?? "sin vendedor";
             return (
               <li
                 key={h.id}
-                className={`flex items-center justify-between text-xs rounded-md px-2 py-1.5 ${
+                className={`flex items-start justify-between gap-2 text-xs rounded-md px-2 py-1.5 ${
                   isThis ? "bg-muted font-medium" : ""
                 }`}
               >
-                <span className="truncate flex items-center gap-1.5">
-                  {isWinner && (
-                    <Trophy className="h-3 w-3 text-amber-500 shrink-0" />
-                  )}
-                  {h.nombre_referencia ?? "Sin nombre"}
-                  {isThis && (
-                    <span className="text-[10px] text-muted-foreground">
-                      (este)
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 truncate">
+                    {isWinner && (
+                      <Trophy className="h-3 w-3 text-amber-500 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {h.licitante ?? h.nombre_referencia ?? "Sin nombre"}
                     </span>
-                  )}
-                </span>
-                <span className="text-muted-foreground shrink-0 ml-2">
+                    {isThis && (
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        (este)
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate">
+                    Vendedor: {vendedorNombre}
+                    {h.estatus_final && (
+                      <span className="ml-1">· {h.estatus_final}</span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-muted-foreground shrink-0">
                   {h.volumen_m3 ? `${h.volumen_m3.toLocaleString()} m³` : "—"}
                 </span>
               </li>
@@ -359,33 +371,58 @@ export function ObraPanel({ sitio, onChanged }: Props) {
       </div>
 
       {!cerrada && (
-        <div className="space-y-2 pt-2 border-t">
-          <Label className="text-xs">Motivo de cierre (opcional)</Label>
-          <Textarea
-            value={closeMotivo}
-            onChange={(e) => setCloseMotivo(e.target.value)}
-            rows={2}
-            maxLength={500}
-            placeholder="Ej. Cliente eligió a Cementos del Pacífico por precio"
-          />
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Motivo / contexto del cierre</Label>
+            <Textarea
+              value={closeMotivo}
+              onChange={(e) => setCloseMotivo(e.target.value)}
+              rows={2}
+              maxLength={500}
+              placeholder="Ej. Cliente final eligió por precio / plazo de entrega"
+            />
+          </div>
+
+          <div className="rounded-md border p-2 space-y-2">
+            <div className="text-xs font-semibold">Cierre de la licitación</div>
+
             <Button
               size="sm"
               onClick={marcarGanador}
               disabled={saving}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
-              <Trophy className="h-4 w-4 mr-1" /> Ganamos esta
+              <Trophy className="h-4 w-4 mr-1" />
+              Ganamos: este registro fue el ganador
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={cerrarPerdida}
-              disabled={saving}
-            >
-              Cerrar como perdida
-            </Button>
+
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">
+                ¿Ganó un competidor externo? (opcional)
+              </Label>
+              <Input
+                value={competidorGanador}
+                onChange={(e) => setCompetidorGanador(e.target.value)}
+                placeholder="Ej. Cementos Moctezuma"
+                maxLength={120}
+                className="h-9"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cerrarPerdida}
+                disabled={saving}
+                className="w-full"
+              >
+                Cerrar como perdida (ganador externo)
+              </Button>
+              <p className="text-[10px] text-muted-foreground">
+                Todos los licitantes vinculados quedarán como{" "}
+                <strong>perdidos</strong> con el motivo y competidor capturados.
+              </p>
+            </div>
           </div>
+
           <Button
             size="sm"
             variant="ghost"
@@ -398,10 +435,33 @@ export function ObraPanel({ sitio, onChanged }: Props) {
         </div>
       )}
 
-      {cerrada && obra.motivo_cierre && (
-        <div className="text-xs text-muted-foreground pt-2 border-t">
-          <span className="font-medium text-foreground">Motivo: </span>
-          {obra.motivo_cierre}
+      {cerrada && (
+        <div className="text-xs pt-2 border-t space-y-1">
+          {obra.estatus === "ganada" && (
+            <div className="text-green-700 dark:text-green-400 font-medium">
+              <Trophy className="h-3 w-3 inline mr-1" />
+              Ganador:{" "}
+              {(() => {
+                const w = hermanos.find(
+                  (h) => h.id === obra.ganador_sitio_id,
+                );
+                if (!w) return "—";
+                const v = w.vendedor?.nombre ?? w.vendedor?.email ?? "—";
+                return `${w.licitante ?? w.nombre_referencia ?? "registro"} · vendedor ${v}`;
+              })()}
+            </div>
+          )}
+          {obra.estatus === "perdida" && obra.competidor_ganador && (
+            <div className="text-red-700 dark:text-red-400 font-medium">
+              Ganó externo: {obra.competidor_ganador}
+            </div>
+          )}
+          {obra.motivo_cierre && (
+            <div className="text-muted-foreground">
+              <span className="font-medium text-foreground">Motivo: </span>
+              {obra.motivo_cierre}
+            </div>
+          )}
         </div>
       )}
     </div>
