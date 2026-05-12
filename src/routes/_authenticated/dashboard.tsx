@@ -98,6 +98,7 @@ function DashboardPage() {
     }
   }
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
+  const [obras, setObras] = useState<Array<{ id: string; nombre: string; estatus: string; ganador_sitio_id: string | null; competidor_ganador: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [precio, setPrecio] = useState(PRECIO_DEFAULT);
   const [horizonte, setHorizonte] = useState<"6" | "12">("6");
@@ -108,12 +109,18 @@ function DashboardPage() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    else setSitios((data as SitioConProfile[]) ?? []);
+    const [resS, resO] = await Promise.all([
+      supabase
+        .from("sitios")
+        .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("obras")
+        .select("id, nombre, estatus, ganador_sitio_id, competidor_ganador"),
+    ]);
+    if (resS.error) toast.error(resS.error.message);
+    else setSitios((resS.data as SitioConProfile[]) ?? []);
+    setObras((resO.data as typeof obras) ?? []);
     setLoading(false);
   }
 
@@ -227,6 +234,27 @@ function DashboardPage() {
     });
     return [...map.values()].sort((a, b) => b.ingreso - a.ingreso).slice(0, 5);
   }, [sitios, precio]);
+
+  // Licitaciones: obras con 2+ sitios (varios licitantes)
+  const licitaciones = useMemo(() => {
+    const sitiosPorObra = new Map<string, SitioConProfile[]>();
+    sitios.forEach((s) => {
+      if (!s.obra_id) return;
+      const arr = sitiosPorObra.get(s.obra_id) ?? [];
+      arr.push(s);
+      sitiosPorObra.set(s.obra_id, arr);
+    });
+    return obras
+      .map((o) => {
+        const items = sitiosPorObra.get(o.id) ?? [];
+        if (items.length < 2) return null;
+        const m3 = items.reduce((a, s) => a + (Number(s.volumen_m3) || 0), 0);
+        const ganador = items.find((s) => s.id === o.ganador_sitio_id) ?? null;
+        return { obra: o, items, m3, ganador };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.m3 - a.m3);
+  }, [obras, sitios]);
 
   function exportCsv() {
     const headers = ["mes", "nuevos", "ganados", "perdidos", "m3_ganado", "ingreso_mxn"];
@@ -538,6 +566,88 @@ function DashboardPage() {
                         </div>
                       </div>
                       <span className="text-sm font-semibold tabular-nums">{MXN(v.ingreso)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {licitaciones.length > 0 && (
+            <div className="bg-card border rounded-2xl p-5 mt-4">
+              <h2 className="font-semibold text-sm mb-1">Licitaciones activas</h2>
+              <p className="text-[11px] text-muted-foreground mb-4">
+                Obras con varios licitantes — quién atendió y resultado final
+              </p>
+              <div className="space-y-4">
+                {licitaciones.map(({ obra, items, m3, ganador }) => {
+                  const estatusTone =
+                    obra.estatus === "ganada"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      : obra.estatus === "perdida"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : obra.estatus === "cancelada"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-amber-100 text-amber-700 border-amber-200";
+                  return (
+                    <div key={obra.id} className="border rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm truncate">{obra.nombre}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {items.length} licitantes · {m3.toLocaleString()} m³ · proyecta {MXN(m3 * precio)}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md border uppercase tracking-wide ${estatusTone}`}>
+                          {obra.estatus}
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto -mx-3 px-3">
+                        <table className="w-full text-xs">
+                          <thead className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            <tr className="border-b">
+                              <th className="text-left py-1.5">Licitante</th>
+                              <th className="text-left py-1.5">Vendedor</th>
+                              <th className="text-right py-1.5">m³</th>
+                              <th className="text-left py-1.5 pl-2">Resultado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((s) => {
+                              const esGanador = ganador?.id === s.id;
+                              return (
+                                <tr key={s.id} className={`border-b last:border-0 ${esGanador ? "bg-emerald-50" : ""}`}>
+                                  <td className="py-1.5 truncate max-w-[160px]">
+                                    {s.licitante ?? s.nombre_referencia ?? "—"}
+                                  </td>
+                                  <td className="py-1.5 truncate max-w-[140px] text-muted-foreground">
+                                    {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
+                                  </td>
+                                  <td className="py-1.5 text-right tabular-nums">
+                                    {(Number(s.volumen_m3) || 0).toLocaleString()}
+                                  </td>
+                                  <td className="py-1.5 pl-2">
+                                    {esGanador ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                                        <Trophy className="h-3 w-3" /> Ganó
+                                      </span>
+                                    ) : s.estatus_final ? (
+                                      <span className="text-muted-foreground capitalize">{s.estatus_final}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">en curso</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {obra.estatus !== "abierta" && obra.competidor_ganador && !ganador && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Ganada por competidor: <span className="font-medium">{obra.competidor_ganador}</span>
+                        </p>
+                      )}
                     </div>
                   );
                 })}

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flame, MapPin } from "lucide-react";
+import { Briefcase, Flame, MapPin, AlertTriangle } from "lucide-react";
 import {
   supabase,
   type Sitio,
@@ -46,9 +46,11 @@ const ETAPA_ACCENT: Record<SitioEtapa, string> = {
 function LeadsPage() {
   const { profile } = useAuth();
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
+  const [lastInteraction, setLastInteraction] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState("all");
   const [filterPrioridad, setFilterPrioridad] = useState("todos");
+  const [filterSeguimiento, setFilterSeguimiento] = useState("todos");
 
   useEffect(() => {
     void load();
@@ -56,13 +58,30 @@ function LeadsPage() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email)")
-      .order("volumen_m3", { ascending: false, nullsFirst: false });
-    if (error) toast.error(error.message);
-    else setSitios((data as SitioConProfile[]) ?? []);
+    const [resSitios, resInts] = await Promise.all([
+      supabase
+        .from("sitios")
+        .select("*, profiles:vendedor_id(nombre,email)")
+        .order("volumen_m3", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("interacciones")
+        .select("sitio_id, fecha")
+        .order("fecha", { ascending: false }),
+    ]);
+    if (resSitios.error) toast.error(resSitios.error.message);
+    else setSitios((resSitios.data as SitioConProfile[]) ?? []);
+    const lastMap: Record<string, string> = {};
+    (resInts.data ?? []).forEach((i) => {
+      const sid = i.sitio_id as string;
+      if (!lastMap[sid]) lastMap[sid] = i.fecha as string;
+    });
+    setLastInteraction(lastMap);
     setLoading(false);
+  }
+
+  function diasSinSeguimiento(s: SitioConProfile): number {
+    const last = lastInteraction[s.id] ?? s.created_at;
+    return Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
   }
 
   const filtered = useMemo(() => {
@@ -71,9 +90,17 @@ function LeadsPage() {
       const v = s.volumen_m3 ?? 0;
       if (filterPrioridad === "importantes" && v < 1000) return false;
       if (filterPrioridad === "criticos" && v < 5000) return false;
+      if (filterSeguimiento !== "todos") {
+        if (s.estatus_final) return false;
+        const d = diasSinSeguimiento(s);
+        if (filterSeguimiento === "stale7" && d < 7) return false;
+        if (filterSeguimiento === "stale14" && d < 14) return false;
+        if (filterSeguimiento === "stale30" && d < 30) return false;
+      }
       return true;
     });
-  }, [sitios, filterEstatus, filterPrioridad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sitios, filterEstatus, filterPrioridad, filterSeguimiento, lastInteraction]);
 
   const porEtapa = useMemo(() => {
     const map: Record<SitioEtapa, SitioConProfile[]> = {
@@ -126,6 +153,17 @@ function LeadsPage() {
                 {ESTATUS_LABEL[e]}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterSeguimiento} onValueChange={setFilterSeguimiento}>
+          <SelectTrigger className="h-9 w-[200px] shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todo el seguimiento</SelectItem>
+            <SelectItem value="stale7">Sin seguimiento ≥ 7 días</SelectItem>
+            <SelectItem value="stale14">Sin seguimiento ≥ 14 días</SelectItem>
+            <SelectItem value="stale30">Sin seguimiento ≥ 30 días</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -211,6 +249,18 @@ function LeadsPage() {
                                       {s.estatus_final}
                                     </Badge>
                                   )}
+                                  {!s.estatus_final && (() => {
+                                    const d = diasSinSeguimiento(s);
+                                    if (d < 7) return null;
+                                    const tone = d >= 30 ? "bg-red-100 text-red-700 border-red-200"
+                                      : d >= 14 ? "bg-amber-100 text-amber-700 border-amber-200"
+                                      : "bg-muted text-muted-foreground";
+                                    return (
+                                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 gap-0.5 ${tone}`}>
+                                        <AlertTriangle className="h-2.5 w-2.5" /> {d}d
+                                      </Badge>
+                                    );
+                                  })()}
                                   <span className="text-[10px] text-muted-foreground ml-auto truncate max-w-[100px]">
                                     {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
                                   </span>
