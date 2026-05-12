@@ -89,8 +89,10 @@ function DashboardPage() {
   const [horizonte, setHorizonte] = useState<"6" | "12">("6");
 
   useEffect(() => {
+    if (!user) return;
     void load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function load() {
     setLoading(true);
@@ -104,9 +106,21 @@ function DashboardPage() {
         .select("id, nombre, estatus, ganador_sitio_id, competidor_ganador"),
     ]);
     if (resS.error) toast.error(resS.error.message);
-    else setSitios((resS.data as SitioConProfile[]) ?? []);
-    setObras((resO.data as typeof obras) ?? []);
+    const loadedSitios = resS.error ? [] : ((resS.data as SitioConProfile[]) ?? []);
+    setSitios(loadedSitios);
+    if (!resO.error) setObras((resO.data as typeof obras) ?? []);
+    else setObras([]);
     setLoading(false);
+
+    if (!resS.error && loadedSitios.length === 0 && user && !seedAttempted.current) {
+      seedAttempted.current = true;
+      try {
+        const seeded = await resetAndSeedAll(user, profile?.zona_id ?? null);
+        if (seeded.sitios > 0) await load();
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
+    }
   }
 
   const meses = useMemo(() => lastNMonths(Number(horizonte)), [horizonte]);
