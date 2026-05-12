@@ -9,7 +9,9 @@ import {
   DollarSign,
   Activity,
   Trophy,
+  Sparkles,
 } from "lucide-react";
+import { enrichExistingDemoData } from "@/lib/seed-sitios";
 import {
   ResponsiveContainer,
   AreaChart,
