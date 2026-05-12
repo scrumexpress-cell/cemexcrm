@@ -142,6 +142,7 @@ function SitioDetailPage() {
       .from("sitios")
       .update({
         nombre_referencia: nombre || null,
+        licitante: licitante.trim() || null,
         direccion: direccion || null,
         estatus,
         volumen_m3: volumen ? Number(volumen) : null,
