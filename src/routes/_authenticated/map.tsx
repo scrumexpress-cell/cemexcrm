@@ -226,7 +226,12 @@ function MapPage() {
       <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
           sitios={placing ? [] : filtered}
-          onPinClick={(s) => !placing && setSelected(s)}
+          currentUserId={user?.id ?? null}
+          onPinClick={(s) => {
+            if (placing) return;
+            const found = sitios.find((x) => x.id === s.id) ?? null;
+            setSelected(found);
+          }}
           onMapClick={(lng, lat) => {
             if (placing) setPlaceCoords({ lng, lat });
           }}
