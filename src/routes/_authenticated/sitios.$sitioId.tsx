@@ -63,6 +63,7 @@ function SitioDetailPage() {
 
   // edit fields
   const [nombre, setNombre] = useState("");
+  const [licitante, setLicitante] = useState("");
   const [direccion, setDireccion] = useState("");
   const [estatus, setEstatus] = useState<SitioEstatus>("prospecto");
   const [volumen, setVolumen] = useState("");
