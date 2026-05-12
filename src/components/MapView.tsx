@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMapboxToken } from "@/lib/mapbox-token";
-import { ESTATUS_COLOR } from "@/lib/sitio-utils";
+import { ESTATUS_COLOR, ESTATUS_LABEL } from "@/lib/sitio-utils";
 import type { Sitio } from "@/integrations/supabase/client";
 
+export type MapSitio = Sitio & {
+  vendedor?: { nombre: string | null; email: string | null } | null;
+};
+
 interface Props {
-  sitios: Sitio[];
-  onPinClick?: (sitio: Sitio) => void;
+  sitios: MapSitio[];
+  onPinClick?: (sitio: MapSitio) => void;
   onMapClick?: (lng: number, lat: number) => void;
   center?: [number, number];
   zoom?: number;
