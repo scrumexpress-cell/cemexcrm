@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
   TrendingUp,
@@ -9,9 +9,8 @@ import {
   DollarSign,
   Activity,
   Trophy,
-  Sparkles,
 } from "lucide-react";
-import { enrichExistingDemoData } from "@/lib/seed-sitios";
+import { resetAndSeedAll } from "@/lib/seed-sitios";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -82,23 +81,7 @@ const MXN = (n: number) =>
 
 function DashboardPage() {
   const { profile, user } = useAuth();
-  const [enriching, setEnriching] = useState(false);
-
-  async function handleEnrich() {
-    if (!user) return;
-    setEnriching(true);
-    try {
-      const res = await enrichExistingDemoData(user);
-      toast.success(
-        `Datos demo: ${res.updated} sitios · ${res.interacciones} interacciones · ${res.obras} licitaciones · ${res.alertas} alertas`,
-      );
-      await load();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setEnriching(false);
-    }
-  }
+  const seedAttempted = useRef(false);
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
   const [obras, setObras] = useState<Array<{ id: string; nombre: string; estatus: string; ganador_sitio_id: string | null; competidor_ganador: string | null }>>([]);
   const [loading, setLoading] = useState(true);
