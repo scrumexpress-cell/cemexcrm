@@ -146,11 +146,6 @@ function MapPage() {
     setPlaceCoords(null);
   }
 
-  const [forceCreate, setForceCreate] = [
-    // placeholder, real state declared above via useState below
-  ] as never;
-  void forceCreate;
-
   function confirmPlacing() {
     if (!placeCoords) {
       toast.error("Toca el mapa para fijar la ubicación");
