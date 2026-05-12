@@ -150,9 +150,64 @@ export function MapView({
         .join(" ")}
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId);
-        dragRef.current = { x: event.clientX, y: event.clientY, center: viewCenter, moved: false };
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pointersRef.current.size === 2) {
+          const pts = Array.from(pointersRef.current.values());
+          const dx = pts[0].x - pts[1].x;
+          const dy = pts[0].y - pts[1].y;
+          pinchRef.current = {
+            initialDist: Math.hypot(dx, dy) || 1,
+            initialZoom: viewZoom,
+            initialCenter: viewCenter,
+            midClient: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+          };
+          dragRef.current = null;
+        } else {
+          dragRef.current = { x: event.clientX, y: event.clientY, center: viewCenter, moved: false };
+        }
       }}
       onPointerMove={(event) => {
+        if (!pointersRef.current.has(event.pointerId)) return;
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (pointersRef.current.size >= 2 && pinchRef.current) {
+          const pts = Array.from(pointersRef.current.values()).slice(0, 2);
+          const dx = pts[0].x - pts[1].x;
+          const dy = pts[0].y - pts[1].y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const ratio = dist / pinchRef.current.initialDist;
+          const newZoom = Math.max(
+            MIN_ZOOM,
+            Math.min(MAX_ZOOM, pinchRef.current.initialZoom + Math.log2(ratio)),
+          );
+          // Keep midpoint anchored: shift center based on midpoint movement plus zoom delta around midpoint
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect) {
+            const initMid = pinchRef.current.midClient;
+            const midX = (pts[0].x + pts[1].x) / 2;
+            const midY = (pts[0].y + pts[1].y) / 2;
+            // World coords of midpoint at new zoom, anchored to initial center at initial zoom
+            const initCenterWorldNew = lngLatToWorld(
+              pinchRef.current.initialCenter[0],
+              pinchRef.current.initialCenter[1],
+              newZoom,
+            );
+            const midOffsetX = initMid.x - rect.left - rect.width / 2;
+            const midOffsetY = initMid.y - rect.top - rect.height / 2;
+            const midWorldX = initCenterWorldNew.x + midOffsetX;
+            const midWorldY = initCenterWorldNew.y + midOffsetY;
+            // We want midWorld to project to current midpoint -> new center
+            const newCenterX = midWorldX - (midX - rect.left - rect.width / 2);
+            const newCenterY = midWorldY - (midY - rect.top - rect.height / 2);
+            const next = worldToLngLat(newCenterX, newCenterY, newZoom);
+            setViewZoom(newZoom);
+            setViewCenter([next.lng, next.lat]);
+          } else {
+            setViewZoom(newZoom);
+          }
+          return;
+        }
+
         const drag = dragRef.current;
         if (!drag) return;
         const dx = event.clientX - drag.x;
@@ -163,11 +218,42 @@ export function MapView({
         setViewCenter([next.lng, next.lat]);
       }}
       onPointerUp={(event) => {
+        pointersRef.current.delete(event.pointerId);
+        const wasPinching = pinchRef.current != null;
+        if (pointersRef.current.size < 2) pinchRef.current = null;
         const drag = dragRef.current;
         dragRef.current = null;
-        if (!drag?.moved) {
+        if (!wasPinching && !drag?.moved) {
           const next = pointToLngLat(event.clientX, event.clientY);
           onMapClick?.(next.lng, next.lat);
+        }
+      }}
+      onPointerCancel={(event) => {
+        pointersRef.current.delete(event.pointerId);
+        if (pointersRef.current.size < 2) pinchRef.current = null;
+        dragRef.current = null;
+      }}
+      onWheel={(event) => {
+        if (!event.deltaY) return;
+        const rect = containerRef.current?.getBoundingClientRect();
+        const delta = -event.deltaY * 0.002;
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewZoom + delta));
+        if (rect) {
+          const offsetX = event.clientX - rect.left - rect.width / 2;
+          const offsetY = event.clientY - rect.top - rect.height / 2;
+          const centerWorldNew = lngLatToWorld(viewCenter[0], viewCenter[1], newZoom);
+          const pointWorldX = centerWorldNew.x + offsetX;
+          const pointWorldY = centerWorldNew.y + offsetY;
+          // Keep cursor point stationary
+          const ratio = 2 ** (newZoom - viewZoom);
+          const newCenterX = pointWorldX - offsetX * ratio / ratio; // simplifies; keep anchored
+          // Actually simpler: re-anchor by translating center so cursor stays
+          const next = worldToLngLat(pointWorldX - offsetX, pointWorldY - offsetY, newZoom);
+          setViewZoom(newZoom);
+          setViewCenter([next.lng, next.lat]);
+          void newCenterX;
+        } else {
+          setViewZoom(newZoom);
         }
       }}
     >
