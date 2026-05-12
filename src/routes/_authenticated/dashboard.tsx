@@ -90,6 +90,30 @@ function DashboardPage() {
     return [...map.values()].sort((a, b) => b.m3 - a.m3 || b.ganados - a.ganados);
   }, [sitios]);
 
+  // Breakdown por zona (head)
+  const porZona = useMemo(() => {
+    const map = new Map<
+      string,
+      { nombre: string; abiertos: number; ganados: number; m3Abierto: number; m3Ganado: number }
+    >();
+    sitios.forEach((s) => {
+      const key = s.zona_id ?? "sin-zona";
+      const nombre = s.zona?.nombre ?? "Sin zona";
+      const cur =
+        map.get(key) ?? { nombre, abiertos: 0, ganados: 0, m3Abierto: 0, m3Ganado: 0 };
+      if (!s.estatus_final) {
+        cur.abiertos += 1;
+        cur.m3Abierto += Number(s.volumen_m3) || 0;
+      }
+      if (s.estatus_final === "ganado") {
+        cur.ganados += 1;
+        cur.m3Ganado += Number(s.volumen_m3) || 0;
+      }
+      map.set(key, cur);
+    });
+    return [...map.values()].sort((a, b) => b.m3Abierto - a.m3Abierto);
+  }, [sitios]);
+
   function exportCsv() {
     const headers = [
       "id",
@@ -141,6 +165,7 @@ function DashboardPage() {
   }
 
   const isVendedor = profile?.role === "vendedor";
+  const isHead = profile?.role === "head";
 
   return (
     <div className="flex-1 px-4 py-4 max-w-3xl w-full mx-auto">
