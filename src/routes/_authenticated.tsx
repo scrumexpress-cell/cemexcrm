@@ -62,13 +62,14 @@ function AuthLayout() {
   }
 
   const path = location.pathname;
+  const role = profile?.role ?? "vendedor";
   const NavLink = ({
     to,
     icon: Icon,
     label,
     badge,
   }: {
-    to: "/map" | "/alertas" | "/dashboard";
+    to: "/map" | "/alertas" | "/dashboard" | "/leads";
     icon: typeof MapIcon;
     label: string;
     badge?: number;
