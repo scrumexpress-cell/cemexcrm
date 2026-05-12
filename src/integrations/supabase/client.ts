@@ -45,6 +45,22 @@ export interface Sitio {
   motivo_cierre: string | null;
   competidor: string | null;
   notas: string | null;
+  obra_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ObraEstatus = "abierta" | "ganada" | "perdida" | "cancelada";
+
+export interface Obra {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  created_by: string | null;
+  estatus: ObraEstatus;
+  ganador_sitio_id: string | null;
+  fecha_cierre: string | null;
+  motivo_cierre: string | null;
   created_at: string;
   updated_at: string;
 }
