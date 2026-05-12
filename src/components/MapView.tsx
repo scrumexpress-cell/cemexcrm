@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import mapboxgl, { type Map as MapboxMap, type Marker, type Popup } from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
+import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
+import { Factory, Box, Flame, Clock } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
@@ -20,27 +25,13 @@ interface Props {
 }
 
 const GDL: [number, number] = [-103.3496, 20.6597];
-const TILE_SIZE = 512;
-const MIN_ZOOM = 3;
-const MAX_ZOOM = 17;
 
-function lngLatToWorld(lng: number, lat: number, zoom: number) {
-  const scale = TILE_SIZE * 2 ** zoom;
-  const clampedLat = Math.max(Math.min(lat, 85.05112878), -85.05112878);
-  const sin = Math.sin((clampedLat * Math.PI) / 180);
-  return {
-    x: ((lng + 180) / 360) * scale,
-    y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale,
-  };
-}
-
-function worldToLngLat(x: number, y: number, zoom: number) {
-  const scale = TILE_SIZE * 2 ** zoom;
-  const lng = (x / scale) * 360 - 180;
-  const n = Math.PI - (2 * Math.PI * y) / scale;
-  const lat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-  return { lng, lat };
-}
+type StyleKey = "streets" | "satellite" | "dark";
+const STYLES: Record<StyleKey, string> = {
+  streets: "mapbox://styles/mapbox/streets-v12",
+  satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+  dark: "mapbox://styles/mapbox/dark-v11",
+};
 
 export function MapView({
   sitios,
@@ -54,395 +45,512 @@ export function MapView({
   currentUserId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ x: number; y: number; center: [number, number]; moved: boolean } | null>(null);
-  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
-  const pinchRef = useRef<{
-    initialDist: number;
-    initialZoom: number;
-    initialCenter: [number, number];
-    midClient: { x: number; y: number };
-  } | null>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
+  const markersRef = useRef<Marker[]>([]);
+  const plantMarkersRef = useRef<Marker[]>([]);
+  const draggableMarkerRef = useRef<Marker | null>(null);
+  const popupRef = useRef<Popup | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+  const onPinClickRef = useRef(onPinClick);
+  const onMarkerDragRef = useRef(onMarkerDrag);
+
   const [token, setToken] = useState<string | null>(null);
   const [tokenMissing, setTokenMissing] = useState(false);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [viewCenter, setViewCenter] = useState<[number, number]>(center);
-  const [viewZoom, setViewZoom] = useState(Math.round(zoom));
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [styleKey, setStyleKey] = useState<StyleKey>("streets");
+  const [is3D, setIs3D] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showIsochrones, setShowIsochrones] = useState(false);
+  const [styleLoaded, setStyleLoaded] = useState(0);
+
+  // Keep callback refs up to date without re-creating map
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+    onPinClickRef.current = onPinClick;
+    onMarkerDragRef.current = onMarkerDrag;
+  });
 
   useEffect(() => {
-    const savedToken = getMapboxToken();
-    setToken(savedToken);
-    setTokenMissing(!savedToken);
+    const saved = getMapboxToken();
+    setToken(saved);
+    setTokenMissing(!saved);
   }, []);
 
+  // Initialize map once
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => setSize({ width: el.clientWidth, height: el.clientHeight });
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+    if (!token || !containerRef.current || mapRef.current) return;
+    mapboxgl.accessToken = token;
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: STYLES[styleKey],
+      center,
+      zoom,
+      attributionControl: false,
+    });
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.touchZoomRotate.enable();
+    map.touchPitch.enable();
 
+    map.on("style.load", () => {
+      setStyleLoaded((v) => v + 1);
+    });
+
+    map.on("click", (e) => {
+      // Ignore clicks on markers (handled separately)
+      const target = e.originalEvent.target as HTMLElement | null;
+      if (target?.closest(".mapboxgl-marker")) return;
+      onMapClickRef.current?.(e.lngLat.lng, e.lngLat.lat);
+    });
+
+    mapRef.current = map;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  // Style change
   useEffect(() => {
-    if (draggableMarker) setViewCenter([draggableMarker.lng, draggableMarker.lat]);
-  }, [draggableMarker?.lat, draggableMarker?.lng]);
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(STYLES[styleKey]);
+  }, [styleKey]);
 
-  const centerWorld = useMemo(
-    () => lngLatToWorld(viewCenter[0], viewCenter[1], viewZoom),
-    [viewCenter, viewZoom],
-  );
+  // Apply 3D terrain + buildings on style load
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleLoaded) return;
 
-  const tiles = useMemo(() => {
-    if (!size.width || !size.height || !token) return [];
-    const halfW = size.width / 2;
-    const halfH = size.height / 2;
-    const tileZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(viewZoom)));
-    const scale = 2 ** (viewZoom - tileZoom);
-    // Compute tile-world coords for current view center at tileZoom
-    const tileCenterWorld = lngLatToWorld(viewCenter[0], viewCenter[1], tileZoom);
-    // Visible world extent in tile-zoom pixels
-    const visHalfW = halfW / scale;
-    const visHalfH = halfH / scale;
-    const startX = Math.floor((tileCenterWorld.x - visHalfW) / TILE_SIZE);
-    const endX = Math.floor((tileCenterWorld.x + visHalfW) / TILE_SIZE);
-    const startY = Math.floor((tileCenterWorld.y - visHalfH) / TILE_SIZE);
-    const endY = Math.floor((tileCenterWorld.y + visHalfH) / TILE_SIZE);
-    const maxTile = 2 ** tileZoom;
-    const result: Array<{ key: string; url: string; left: number; top: number; scale: number }> = [];
-
-    for (let x = startX; x <= endX; x += 1) {
-      for (let y = startY; y <= endY; y += 1) {
-        if (y < 0 || y >= maxTile) continue;
-        const wrappedX = ((x % maxTile) + maxTile) % maxTile;
-        const tileLeftWorld = x * TILE_SIZE - tileCenterWorld.x;
-        const tileTopWorld = y * TILE_SIZE - tileCenterWorld.y;
-        result.push({
-          key: `${tileZoom}-${x}-${y}`,
-          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/${TILE_SIZE}/${tileZoom}/${wrappedX}/${y}@2x?access_token=${token}`,
-          left: tileLeftWorld * scale + halfW,
-          top: tileTopWorld * scale + halfH,
-          scale,
+    if (is3D) {
+      if (!map.getSource("mapbox-dem")) {
+        map.addSource("mapbox-dem", {
+          type: "raster-dem",
+          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+          tileSize: 512,
+          maxzoom: 14,
         });
       }
+      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
+      map.easeTo({ pitch: 60, bearing: -20, duration: 800 });
+
+      // 3D buildings layer (only on streets/dark styles)
+      if (styleKey !== "satellite" && !map.getLayer("3d-buildings")) {
+        const layers = map.getStyle().layers;
+        const labelLayer = layers?.find(
+          (l) => l.type === "symbol" && (l.layout as Record<string, unknown> | undefined)?.["text-field"],
+        );
+        try {
+          map.addLayer(
+            {
+              id: "3d-buildings",
+              source: "composite",
+              "source-layer": "building",
+              filter: ["==", "extrude", "true"],
+              type: "fill-extrusion",
+              minzoom: 14,
+              paint: {
+                "fill-extrusion-color": "#aaa",
+                "fill-extrusion-height": [
+                  "interpolate", ["linear"], ["zoom"],
+                  14, 0, 15.05, ["get", "height"],
+                ],
+                "fill-extrusion-base": [
+                  "interpolate", ["linear"], ["zoom"],
+                  14, 0, 15.05, ["get", "min_height"],
+                ],
+                "fill-extrusion-opacity": 0.7,
+              },
+            },
+            labelLayer?.id,
+          );
+        } catch {
+          // some styles don't expose composite source
+        }
+      }
+    } else {
+      map.setTerrain(null);
+      map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
+      if (map.getLayer("3d-buildings")) map.removeLayer("3d-buildings");
     }
-    return result;
-  }, [size.height, size.width, token, viewZoom, viewCenter]);
+  }, [is3D, styleLoaded, styleKey]);
 
-  function pointToLngLat(clientX: number, clientY: number) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { lng: viewCenter[0], lat: viewCenter[1] };
-    return worldToLngLat(
-      centerWorld.x + clientX - rect.left - rect.width / 2,
-      centerWorld.y + clientY - rect.top - rect.height / 2,
-      viewZoom,
-    );
-  }
+  // Render sitio markers
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    // Clear previous
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
 
-  function markerPosition(lng: number, lat: number) {
-    const world = lngLatToWorld(lng, lat, viewZoom);
-    return {
-      left: world.x - centerWorld.x + size.width / 2,
-      top: world.y - centerWorld.y + size.height / 2,
+    sitios.forEach((s) => {
+      const isMine = currentUserId != null && s.vendedor_id === currentUserId;
+      const color = ESTATUS_COLOR[s.estatus] ?? "#888";
+      const Icon = ESTATUS_ICON[s.estatus];
+      const iconHtml = renderToStaticMarkup(
+        <Icon
+          color="white"
+          size={isMine ? 14 : 12}
+          strokeWidth={2.5}
+        />,
+      );
+
+      const el = document.createElement("button");
+      el.type = "button";
+      el.setAttribute("aria-label", s.nombre_referencia ?? "Sitio");
+      el.style.cssText = `
+        width:${isMine ? 28 : 24}px;
+        height:${isMine ? 28 : 24}px;
+        border-radius:9999px;
+        background:${color};
+        border:${isMine ? "3px solid hsl(var(--accent, 38 92% 50%))" : "2px solid white"};
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;padding:0;
+        ${isMine ? "outline: 2px solid rgba(245,158,11,0.4); outline-offset: 1px;" : ""}
+      `;
+      el.innerHTML = iconHtml;
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        onPinClickRef.current?.(s);
+      });
+
+      // Hover popup
+      el.addEventListener("mouseenter", () => {
+        if (popupRef.current) popupRef.current.remove();
+        const popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 16,
+          className: "cemex-popup",
+        })
+          .setLngLat([s.lng, s.lat])
+          .setHTML(buildPopupHTML(s, isMine))
+          .addTo(map);
+        popupRef.current = popup;
+      });
+      el.addEventListener("mouseleave", () => {
+        if (popupRef.current) {
+          popupRef.current.remove();
+          popupRef.current = null;
+        }
+      });
+
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([s.lng, s.lat])
+        .addTo(map);
+      markersRef.current.push(marker);
+    });
+  }, [sitios, currentUserId, styleLoaded]);
+
+  // Plant markers (always visible)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    plantMarkersRef.current.forEach((m) => m.remove());
+    plantMarkersRef.current = [];
+
+    PLANTAS_CEMEX.forEach((p) => {
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width:32px;height:32px;border-radius:8px;
+        background:#1F2A93;border:2px solid white;
+        box-shadow:0 3px 8px rgba(0,0,0,0.4);
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;
+      `;
+      el.innerHTML = renderToStaticMarkup(
+        <Factory color="white" size={18} strokeWidth={2.5} />,
+      );
+      el.title = p.nombre;
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        new mapboxgl.Popup({ offset: 18 })
+          .setLngLat([p.lng, p.lat])
+          .setHTML(
+            `<div style="padding:4px 6px;font-weight:600;font-size:13px">${p.nombre}</div>
+             <div style="padding:0 6px 4px;font-size:11px;color:#666">Planta CEMEX</div>`,
+          )
+          .addTo(map);
+      });
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([p.lng, p.lat])
+        .addTo(map);
+      plantMarkersRef.current.push(marker);
+    });
+  }, [styleLoaded]);
+
+  // Heatmap layer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleLoaded) return;
+    const SOURCE = "sitios-heat";
+    const LAYER = "sitios-heat-layer";
+
+    const features = sitios.map((s) => ({
+      type: "Feature" as const,
+      geometry: { type: "Point" as const, coordinates: [s.lng, s.lat] },
+      properties: { volumen: s.volumen_m3 ?? 100 },
+    }));
+
+    if (map.getLayer(LAYER)) map.removeLayer(LAYER);
+    if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+
+    if (showHeatmap && features.length > 0) {
+      map.addSource(SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features },
+      });
+      map.addLayer({
+        id: LAYER,
+        type: "heatmap",
+        source: SOURCE,
+        maxzoom: 16,
+        paint: {
+          "heatmap-weight": [
+            "interpolate", ["linear"], ["get", "volumen"],
+            0, 0.1, 5000, 1,
+          ],
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 1, 16, 3,
+          ],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(31,42,147,0)",
+            0.2, "rgba(31,42,147,0.4)",
+            0.5, "rgba(225,37,27,0.6)",
+            0.8, "rgba(245,158,11,0.8)",
+            1, "rgba(255,255,0,0.9)",
+          ],
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            0, 4, 16, 60,
+          ],
+          "heatmap-opacity": 0.75,
+        },
+      });
+    }
+  }, [showHeatmap, sitios, styleLoaded]);
+
+  // Isochrones from CEMEX plants (15/30/45 min driving)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleLoaded || !token) return;
+
+    const SOURCE = "isochrones";
+    const FILL = "isochrones-fill";
+    const LINE = "isochrones-line";
+
+    if (map.getLayer(FILL)) map.removeLayer(FILL);
+    if (map.getLayer(LINE)) map.removeLayer(LINE);
+    if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+
+    if (!showIsochrones) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const all: GeoJSON.Feature[] = [];
+        for (const p of PLANTAS_CEMEX) {
+          const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${p.lng},${p.lat}?contours_minutes=15,30,45&polygons=true&access_token=${token}`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          (data.features as GeoJSON.Feature[] | undefined)?.forEach((f) => {
+            f.properties = { ...f.properties, plantaId: p.id, plantaNombre: p.nombre };
+            all.push(f);
+          });
+        }
+        if (cancelled || !mapRef.current) return;
+        // Sort largest first so smaller isochrones render on top
+        all.sort((a, b) => {
+          const am = (a.properties as { contour?: number } | null)?.contour ?? 0;
+          const bm = (b.properties as { contour?: number } | null)?.contour ?? 0;
+          return bm - am;
+        });
+
+        if (map.getLayer(FILL)) map.removeLayer(FILL);
+        if (map.getLayer(LINE)) map.removeLayer(LINE);
+        if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+
+        map.addSource(SOURCE, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: all },
+        });
+        map.addLayer({
+          id: FILL,
+          type: "fill",
+          source: SOURCE,
+          paint: {
+            "fill-color": [
+              "match", ["get", "contour"],
+              15, "#10B981",
+              30, "#F59E0B",
+              45, "#E1251B",
+              "#999",
+            ],
+            "fill-opacity": 0.18,
+          },
+        });
+        map.addLayer({
+          id: LINE,
+          type: "line",
+          source: SOURCE,
+          paint: {
+            "line-color": [
+              "match", ["get", "contour"],
+              15, "#10B981",
+              30, "#F59E0B",
+              45, "#E1251B",
+              "#999",
+            ],
+            "line-width": 1.5,
+            "line-opacity": 0.7,
+          },
+        });
+      } catch {
+        // silently ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-  }
+  }, [showIsochrones, styleLoaded, token]);
+
+  // Draggable marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!draggableMarker) {
+      draggableMarkerRef.current?.remove();
+      draggableMarkerRef.current = null;
+      return;
+    }
+    if (!draggableMarkerRef.current) {
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width:24px;height:24px;border-radius:9999px;
+        background:hsl(var(--primary, 232 65% 35%));
+        border:3px solid hsl(var(--accent, 38 92% 50%));
+        box-shadow:0 4px 10px rgba(0,0,0,0.4);
+        cursor:grab;
+      `;
+      const m = new mapboxgl.Marker({ element: el, draggable: true })
+        .setLngLat([draggableMarker.lng, draggableMarker.lat])
+        .addTo(map);
+      m.on("dragend", () => {
+        const ll = m.getLngLat();
+        onMarkerDragRef.current?.(ll.lng, ll.lat);
+      });
+      draggableMarkerRef.current = m;
+    } else {
+      draggableMarkerRef.current.setLngLat([draggableMarker.lng, draggableMarker.lat]);
+    }
+  }, [draggableMarker?.lng, draggableMarker?.lat]);
+
+  const legend = useMemo(() => {
+    if (!showIsochrones) return null;
+    return (
+      <div className="absolute bottom-3 left-3 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
+        <div className="font-semibold flex items-center gap-1">
+          <Clock className="h-3 w-3" /> Tiempo desde planta
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-sm" style={{ background: "#10B981" }} /> 15 min
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-sm" style={{ background: "#F59E0B" }} /> 30 min
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-sm" style={{ background: "#E1251B" }} /> 45 min
+        </div>
+      </div>
+    );
+  }, [showIsochrones]);
 
   if (tokenMissing) {
     return <MapboxTokenPrompt onSaved={() => setTokenMissing(false)} />;
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={["relative h-full min-h-[320px] w-full overflow-hidden bg-muted touch-none", className]
-        .filter(Boolean)
-        .join(" ")}
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-        if (pointersRef.current.size === 2) {
-          const pts = Array.from(pointersRef.current.values());
-          const dx = pts[0].x - pts[1].x;
-          const dy = pts[0].y - pts[1].y;
-          pinchRef.current = {
-            initialDist: Math.hypot(dx, dy) || 1,
-            initialZoom: viewZoom,
-            initialCenter: viewCenter,
-            midClient: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
-          };
-          dragRef.current = null;
-        } else {
-          dragRef.current = { x: event.clientX, y: event.clientY, center: viewCenter, moved: false };
-        }
-      }}
-      onPointerMove={(event) => {
-        if (!pointersRef.current.has(event.pointerId)) return;
-        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    <div className={["relative h-full min-h-[320px] w-full overflow-hidden", className].filter(Boolean).join(" ")}>
+      <div ref={containerRef} className="absolute inset-0" />
 
-        if (pointersRef.current.size >= 2 && pinchRef.current) {
-          const pts = Array.from(pointersRef.current.values()).slice(0, 2);
-          const dx = pts[0].x - pts[1].x;
-          const dy = pts[0].y - pts[1].y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const ratio = dist / pinchRef.current.initialDist;
-          const newZoom = Math.max(
-            MIN_ZOOM,
-            Math.min(MAX_ZOOM, pinchRef.current.initialZoom + Math.log2(ratio)),
-          );
-          // Keep midpoint anchored: shift center based on midpoint movement plus zoom delta around midpoint
-          const rect = containerRef.current?.getBoundingClientRect();
-          if (rect) {
-            const initMid = pinchRef.current.midClient;
-            const midX = (pts[0].x + pts[1].x) / 2;
-            const midY = (pts[0].y + pts[1].y) / 2;
-            // World coords of midpoint at new zoom, anchored to initial center at initial zoom
-            const initCenterWorldNew = lngLatToWorld(
-              pinchRef.current.initialCenter[0],
-              pinchRef.current.initialCenter[1],
-              newZoom,
-            );
-            const midOffsetX = initMid.x - rect.left - rect.width / 2;
-            const midOffsetY = initMid.y - rect.top - rect.height / 2;
-            const midWorldX = initCenterWorldNew.x + midOffsetX;
-            const midWorldY = initCenterWorldNew.y + midOffsetY;
-            // We want midWorld to project to current midpoint -> new center
-            const newCenterX = midWorldX - (midX - rect.left - rect.width / 2);
-            const newCenterY = midWorldY - (midY - rect.top - rect.height / 2);
-            const next = worldToLngLat(newCenterX, newCenterY, newZoom);
-            setViewZoom(newZoom);
-            setViewCenter([next.lng, next.lat]);
-          } else {
-            setViewZoom(newZoom);
-          }
-          return;
-        }
-
-        const drag = dragRef.current;
-        if (!drag) return;
-        const dx = event.clientX - drag.x;
-        const dy = event.clientY - drag.y;
-        if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-        const start = lngLatToWorld(drag.center[0], drag.center[1], viewZoom);
-        const next = worldToLngLat(start.x - dx, start.y - dy, viewZoom);
-        setViewCenter([next.lng, next.lat]);
-      }}
-      onPointerUp={(event) => {
-        pointersRef.current.delete(event.pointerId);
-        const wasPinching = pinchRef.current != null;
-        if (pointersRef.current.size < 2) pinchRef.current = null;
-        const drag = dragRef.current;
-        dragRef.current = null;
-        if (!wasPinching && !drag?.moved) {
-          const next = pointToLngLat(event.clientX, event.clientY);
-          onMapClick?.(next.lng, next.lat);
-        }
-      }}
-      onPointerCancel={(event) => {
-        pointersRef.current.delete(event.pointerId);
-        if (pointersRef.current.size < 2) pinchRef.current = null;
-        dragRef.current = null;
-      }}
-      onWheel={(event) => {
-        if (!event.deltaY) return;
-        const rect = containerRef.current?.getBoundingClientRect();
-        const delta = -event.deltaY * 0.002;
-        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, viewZoom + delta));
-        if (rect) {
-          const offsetX = event.clientX - rect.left - rect.width / 2;
-          const offsetY = event.clientY - rect.top - rect.height / 2;
-          const cursor = worldToLngLat(
-            centerWorld.x + offsetX,
-            centerWorld.y + offsetY,
-            viewZoom,
-          );
-          const cursorAtNew = lngLatToWorld(cursor.lng, cursor.lat, newZoom);
-          const next = worldToLngLat(cursorAtNew.x - offsetX, cursorAtNew.y - offsetY, newZoom);
-          setViewZoom(newZoom);
-          setViewCenter([next.lng, next.lat]);
-        } else {
-          setViewZoom(newZoom);
-        }
-      }}
-    >
-      {tiles.map((tile) => (
-        <img
-          key={tile.key}
-          src={tile.url}
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute h-[512px] w-[512px] select-none origin-top-left"
-          style={{
-            transform: `translate3d(${tile.left}px, ${tile.top}px, 0) scale(${tile.scale})`,
-          }}
-        />
-      ))}
-
-      {sitios.map((sitio) => {
-        const position = markerPosition(sitio.lng, sitio.lat);
-        const isMine =
-          currentUserId != null && sitio.vendedor_id === currentUserId;
-        const isHovered = hoveredId === sitio.id;
-        return (
-          <div
-            key={sitio.id}
-            className="absolute"
-            style={{ left: position.left, top: position.top }}
-          >
-            {(() => {
-              const Icon = ESTATUS_ICON[sitio.estatus];
-              return (
-                <button
-                  type="button"
-                  aria-label={sitio.nombre_referencia ?? "Sitio"}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md transition-transform flex items-center justify-center text-white ${
-                    isMine
-                      ? "h-7 w-7 border-[3px] border-accent ring-2 ring-accent/40"
-                      : "h-6 w-6 border-2 border-card opacity-95"
-                  } ${isHovered ? "scale-125 z-10" : ""}`}
-                  style={{
-                    backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
-                  }}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onPointerEnter={() => setHoveredId(sitio.id)}
-                  onPointerLeave={() =>
-                    setHoveredId((id) => (id === sitio.id ? null : id))
-                  }
-                  onClick={() => onPinClick?.(sitio)}
-                >
-                  <Icon className={isMine ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.5} />
-                </button>
-              );
-            })()}
-            {isHovered && (
-              <div
-                className="absolute z-20 -translate-x-1/2 pointer-events-none"
-                style={{ left: 0, top: 16 }}
-              >
-                <div className="w-64 rounded-lg border bg-popover text-popover-foreground shadow-xl p-3 text-xs space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="font-semibold text-sm leading-tight">
-                      {sitio.nombre_referencia ?? "Sitio sin nombre"}
-                    </div>
-                    <span
-                      className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white"
-                      style={{
-                        backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
-                      }}
-                    >
-                      {ESTATUS_LABEL[sitio.estatus]}
-                    </span>
-                  </div>
-                  <div className="text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      Ejecutivo:{" "}
-                    </span>
-                    {isMine
-                      ? "Tú"
-                      : (sitio.vendedor?.nombre ??
-                        sitio.vendedor?.email ??
-                        "Sin asignar")}
-                  </div>
-                  {sitio.volumen_m3 != null && (
-                    <div>
-                      <span className="font-medium">Volumen: </span>
-                      {sitio.volumen_m3.toLocaleString()} m³
-                    </div>
-                  )}
-                  {sitio.direccion && (
-                    <div>
-                      <span className="font-medium">Dirección: </span>
-                      {sitio.direccion}
-                    </div>
-                  )}
-                  {sitio.competidor && (
-                    <div>
-                      <span className="font-medium">Competidor: </span>
-                      {sitio.competidor}
-                    </div>
-                  )}
-                  {sitio.notas && (
-                    <div className="text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                      <span className="font-medium text-foreground">
-                        Notas:{" "}
-                      </span>
-                      {sitio.notas}
-                    </div>
-                  )}
-                  <div className="text-[10px] text-muted-foreground pt-0.5">
-                    {sitio.lat.toFixed(5)}, {sitio.lng.toFixed(5)}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {draggableMarker ? (
-        <DraggableMapMarker
-          position={markerPosition(draggableMarker.lng, draggableMarker.lat)}
-          onDragEnd={(clientX, clientY) => {
-            const next = pointToLngLat(clientX, clientY);
-            onMarkerDrag?.(next.lng, next.lat);
-          }}
-        />
-      ) : null}
-
-      <div className="absolute right-3 top-3 flex flex-col overflow-hidden rounded-md border bg-card shadow-sm">
-        <button
-          type="button"
-          className="h-9 w-9 border-b text-lg font-semibold text-foreground"
-          onClick={() => setViewZoom((current) => Math.min(MAX_ZOOM, current + 1))}
-          aria-label="Acercar"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="h-9 w-9 text-lg font-semibold text-foreground"
-          onClick={() => setViewZoom((current) => Math.max(MIN_ZOOM, current - 1))}
-          aria-label="Alejar"
-        >
-          −
-        </button>
+      {/* Style switcher + 3D toggle */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+        <div className="bg-card border rounded-lg shadow-lg p-1 flex gap-0.5">
+          {(["streets", "satellite", "dark"] as StyleKey[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setStyleKey(k)}
+              className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                styleKey === k ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+              }`}
+            >
+              {k === "streets" ? "Calles" : k === "satellite" ? "Satélite" : "Oscuro"}
+            </button>
+          ))}
+        </div>
+        <div className="bg-card border rounded-lg shadow-lg p-1 flex gap-0.5">
+          <ToggleBtn active={is3D} onClick={() => setIs3D((v) => !v)} icon={<Box className="h-3.5 w-3.5" />} label="3D" />
+          <ToggleBtn active={showHeatmap} onClick={() => setShowHeatmap((v) => !v)} icon={<Flame className="h-3.5 w-3.5" />} label="Calor" />
+          <ToggleBtn active={showIsochrones} onClick={() => setShowIsochrones((v) => !v)} icon={<Clock className="h-3.5 w-3.5" />} label="Tiempo" />
+        </div>
       </div>
+
+      {legend}
     </div>
   );
 }
 
-function DraggableMapMarker({
-  position,
-  onDragEnd,
+function ToggleBtn({
+  active,
+  onClick,
+  icon,
+  label,
 }: {
-  position: { left: number; top: number };
-  onDragEnd: (clientX: number, clientY: number) => void;
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
 }) {
-  const [dragPosition, setDragPosition] = useState(position);
-
-  useEffect(() => setDragPosition(position), [position.left, position.top]);
-
   return (
     <button
       type="button"
-      aria-label="Ubicación seleccionada"
-      className="absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[3px] border-accent bg-primary shadow-lg active:cursor-grabbing"
-      style={{ left: dragPosition.left, top: dragPosition.top }}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-        const parent = event.currentTarget.parentElement?.getBoundingClientRect();
-        if (!parent) return;
-        setDragPosition({ left: event.clientX - parent.left, top: event.clientY - parent.top });
-      }}
-      onPointerUp={(event) => {
-        event.stopPropagation();
-        onDragEnd(event.clientX, event.clientY);
-      }}
-    />
+      onClick={onClick}
+      className={`px-2 py-1 text-xs font-medium rounded transition flex items-center gap-1 ${
+        active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function buildPopupHTML(s: MapSitio, isMine: boolean): string {
+  const color = ESTATUS_COLOR[s.estatus] ?? "#888";
+  const label = ESTATUS_LABEL[s.estatus];
+  const ejecutivo = isMine ? "Tú" : (s.vendedor?.nombre ?? s.vendedor?.email ?? "Sin asignar");
+  return `
+    <div style="padding:6px 8px;font-size:12px;max-width:240px">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:4px">
+        <strong style="font-size:13px">${escapeHtml(s.nombre_referencia ?? "Sitio sin nombre")}</strong>
+        <span style="background:${color};color:white;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap">${label}</span>
+      </div>
+      <div style="color:#666"><b style="color:#222">Ejecutivo:</b> ${escapeHtml(ejecutivo)}</div>
+      ${s.volumen_m3 != null ? `<div><b>Volumen:</b> ${s.volumen_m3.toLocaleString()} m³</div>` : ""}
+      ${s.direccion ? `<div><b>Dirección:</b> ${escapeHtml(s.direccion)}</div>` : ""}
+      ${s.competidor ? `<div><b>Competidor:</b> ${escapeHtml(s.competidor)}</div>` : ""}
+    </div>
+  `;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
   );
 }
 
