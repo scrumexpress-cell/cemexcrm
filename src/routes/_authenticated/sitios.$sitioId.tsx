@@ -232,12 +232,26 @@ function SitioDetailPage() {
 
       <div className="space-y-4 bg-card border rounded-xl p-4">
         <div className="space-y-2">
-          <Label>Nombre / referencia</Label>
+          <Label>Nombre / referencia de la obra</Label>
           <Input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className="h-12"
           />
+        </div>
+        <div className="space-y-2">
+          <Label>Licitante / cliente que atiendo</Label>
+          <Input
+            value={licitante}
+            onChange={(e) => setLicitante(e.target.value)}
+            placeholder="Ej. Constructora ABC (en licitaciones)"
+            maxLength={120}
+            className="h-12"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Si la obra es licitación, escribe aquí qué empresa/licitante
+            atiendes. La obra se agrupa abajo en "Licitación".
+          </p>
         </div>
         <div className="space-y-2">
           <Label>Estatus</Label>
