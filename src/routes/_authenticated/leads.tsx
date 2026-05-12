@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flame, MapPin } from "lucide-react";
+import { Briefcase, Flame, MapPin, AlertTriangle } from "lucide-react";
 import {
   supabase,
   type Sitio,
@@ -46,9 +46,11 @@ const ETAPA_ACCENT: Record<SitioEtapa, string> = {
 function LeadsPage() {
   const { profile } = useAuth();
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
+  const [lastInteraction, setLastInteraction] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState("all");
   const [filterPrioridad, setFilterPrioridad] = useState("todos");
+  const [filterSeguimiento, setFilterSeguimiento] = useState("todos");
 
   useEffect(() => {
     void load();
@@ -56,13 +58,30 @@ function LeadsPage() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email)")
-      .order("volumen_m3", { ascending: false, nullsFirst: false });
-    if (error) toast.error(error.message);
-    else setSitios((data as SitioConProfile[]) ?? []);
+    const [resSitios, resInts] = await Promise.all([
+      supabase
+        .from("sitios")
+        .select("*, profiles:vendedor_id(nombre,email)")
+        .order("volumen_m3", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("interacciones")
+        .select("sitio_id, fecha")
+        .order("fecha", { ascending: false }),
+    ]);
+    if (resSitios.error) toast.error(resSitios.error.message);
+    else setSitios((resSitios.data as SitioConProfile[]) ?? []);
+    const lastMap: Record<string, string> = {};
+    (resInts.data ?? []).forEach((i) => {
+      const sid = i.sitio_id as string;
+      if (!lastMap[sid]) lastMap[sid] = i.fecha as string;
+    });
+    setLastInteraction(lastMap);
     setLoading(false);
+  }
+
+  function diasSinSeguimiento(s: SitioConProfile): number {
+    const last = lastInteraction[s.id] ?? s.created_at;
+    return Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
   }
 
   const filtered = useMemo(() => {
@@ -71,9 +90,17 @@ function LeadsPage() {
       const v = s.volumen_m3 ?? 0;
       if (filterPrioridad === "importantes" && v < 1000) return false;
       if (filterPrioridad === "criticos" && v < 5000) return false;
+      if (filterSeguimiento !== "todos") {
+        if (s.estatus_final) return false;
+        const d = diasSinSeguimiento(s);
+        if (filterSeguimiento === "stale7" && d < 7) return false;
+        if (filterSeguimiento === "stale14" && d < 14) return false;
+        if (filterSeguimiento === "stale30" && d < 30) return false;
+      }
       return true;
     });
-  }, [sitios, filterEstatus, filterPrioridad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sitios, filterEstatus, filterPrioridad, filterSeguimiento, lastInteraction]);
 
   const porEtapa = useMemo(() => {
     const map: Record<SitioEtapa, SitioConProfile[]> = {
