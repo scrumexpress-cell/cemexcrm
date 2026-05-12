@@ -47,6 +47,7 @@ export function MapView({
   className,
   draggableMarker,
   onMarkerDrag,
+  currentUserId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; center: [number, number]; moved: boolean } | null>(null);
