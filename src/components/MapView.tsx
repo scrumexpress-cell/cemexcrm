@@ -273,8 +273,10 @@ export function MapView({
           src={tile.url}
           alt=""
           draggable={false}
-          className="pointer-events-none absolute h-[512px] w-[512px] select-none"
-          style={{ transform: `translate3d(${tile.left}px, ${tile.top}px, 0)` }}
+          className="pointer-events-none absolute h-[512px] w-[512px] select-none origin-top-left"
+          style={{
+            transform: `translate3d(${tile.left}px, ${tile.top}px, 0) scale(${tile.scale})`,
+          }}
         />
       ))}
 
