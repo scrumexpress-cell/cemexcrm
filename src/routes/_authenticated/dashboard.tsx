@@ -220,6 +220,40 @@ function DashboardPage() {
             </div>
           </div>
 
+          {isHead && (
+            <div className="bg-card border rounded-xl p-4 mb-4">
+              <h2 className="font-semibold mb-3 text-sm">Oportunidades por zona</h2>
+              <div className="overflow-x-auto -mx-4 px-4">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr className="border-b">
+                      <th className="text-left py-2">Zona</th>
+                      <th className="text-right py-2">Abiertos</th>
+                      <th className="text-right py-2">m³ pipeline</th>
+                      <th className="text-right py-2">Ganados</th>
+                      <th className="text-right py-2">m³ ganados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {porZona.map((z, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="py-2 truncate max-w-[160px]">{z.nombre}</td>
+                        <td className="text-right tabular-nums">{z.abiertos}</td>
+                        <td className="text-right tabular-nums font-medium">
+                          {z.m3Abierto.toLocaleString()}
+                        </td>
+                        <td className="text-right tabular-nums">{z.ganados}</td>
+                        <td className="text-right tabular-nums">
+                          {z.m3Ganado.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {!isVendedor && (
             <div className="bg-card border rounded-xl p-4">
               <h2 className="font-semibold mb-3 text-sm">Ranking por vendedor</h2>
