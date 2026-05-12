@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMapboxToken } from "@/lib/mapbox-token";
-import { ESTATUS_COLOR } from "@/lib/sitio-utils";
+import { ESTATUS_COLOR, ESTATUS_LABEL } from "@/lib/sitio-utils";
 import type { Sitio } from "@/integrations/supabase/client";
 
+export type MapSitio = Sitio & {
+  vendedor?: { nombre: string | null; email: string | null } | null;
+};
+
 interface Props {
-  sitios: Sitio[];
-  onPinClick?: (sitio: Sitio) => void;
+  sitios: MapSitio[];
+  onPinClick?: (sitio: MapSitio) => void;
   onMapClick?: (lng: number, lat: number) => void;
   center?: [number, number];
   zoom?: number;
@@ -56,6 +60,7 @@ export function MapView({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewCenter, setViewCenter] = useState<[number, number]>(center);
   const [viewZoom, setViewZoom] = useState(Math.round(zoom));
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedToken = getMapboxToken();
@@ -174,24 +179,93 @@ export function MapView({
         const position = markerPosition(sitio.lng, sitio.lat);
         const isMine =
           currentUserId != null && sitio.vendedor_id === currentUserId;
+        const isHovered = hoveredId === sitio.id;
         return (
-          <button
+          <div
             key={sitio.id}
-            type="button"
-            aria-label={sitio.nombre_referencia ?? "Sitio"}
-            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md ${
-              isMine
-                ? "h-[20px] w-[20px] border-[3px] border-accent ring-2 ring-accent/40"
-                : "h-[18px] w-[18px] border-2 border-card opacity-90"
-            }`}
-            style={{
-              left: position.left,
-              top: position.top,
-              backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => onPinClick?.(sitio)}
-          />
+            className="absolute"
+            style={{ left: position.left, top: position.top }}
+          >
+            <button
+              type="button"
+              aria-label={sitio.nombre_referencia ?? "Sitio"}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md transition-transform ${
+                isMine
+                  ? "h-[20px] w-[20px] border-[3px] border-accent ring-2 ring-accent/40"
+                  : "h-[18px] w-[18px] border-2 border-card opacity-90"
+              } ${isHovered ? "scale-125 z-10" : ""}`}
+              style={{
+                backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerEnter={() => setHoveredId(sitio.id)}
+              onPointerLeave={() =>
+                setHoveredId((id) => (id === sitio.id ? null : id))
+              }
+              onClick={() => onPinClick?.(sitio)}
+            />
+            {isHovered && (
+              <div
+                className="absolute z-20 -translate-x-1/2 pointer-events-none"
+                style={{ left: 0, top: 16 }}
+              >
+                <div className="w-64 rounded-lg border bg-popover text-popover-foreground shadow-xl p-3 text-xs space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-semibold text-sm leading-tight">
+                      {sitio.nombre_referencia ?? "Sitio sin nombre"}
+                    </div>
+                    <span
+                      className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold text-white"
+                      style={{
+                        backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
+                      }}
+                    >
+                      {ESTATUS_LABEL[sitio.estatus]}
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      Ejecutivo:{" "}
+                    </span>
+                    {isMine
+                      ? "Tú"
+                      : (sitio.vendedor?.nombre ??
+                        sitio.vendedor?.email ??
+                        "Sin asignar")}
+                  </div>
+                  {sitio.volumen_m3 != null && (
+                    <div>
+                      <span className="font-medium">Volumen: </span>
+                      {sitio.volumen_m3.toLocaleString()} m³
+                    </div>
+                  )}
+                  {sitio.direccion && (
+                    <div>
+                      <span className="font-medium">Dirección: </span>
+                      {sitio.direccion}
+                    </div>
+                  )}
+                  {sitio.competidor && (
+                    <div>
+                      <span className="font-medium">Competidor: </span>
+                      {sitio.competidor}
+                    </div>
+                  )}
+                  {sitio.notas && (
+                    <div className="text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                      <span className="font-medium text-foreground">
+                        Notas:{" "}
+                      </span>
+                      {sitio.notas}
+                    </div>
+                  )}
+                  <div className="text-[10px] text-muted-foreground pt-0.5">
+                    {sitio.lat.toFixed(5)}, {sitio.lng.toFixed(5)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         );
       })}
 

@@ -44,6 +44,7 @@ export interface Sitio {
   estatus_final: SitioEstatusFinal | null;
   motivo_cierre: string | null;
   competidor: string | null;
+  notas: string | null;
   created_at: string;
   updated_at: string;
 }
