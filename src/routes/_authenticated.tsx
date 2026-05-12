@@ -37,6 +37,7 @@ function AuthLayout() {
       if (typeof window === "undefined") return;
       if (window.localStorage.getItem(flagKey)) return;
       try {
+        window.localStorage.setItem(flagKey, "pending");
         const { data: prof } = await supabase
           .from("profiles")
           .select("zona_id")
@@ -47,6 +48,7 @@ function AuthLayout() {
         // refresca la vista actual para mostrar los datos sembrados
         router.invalidate();
       } catch (e) {
+        window.localStorage.removeItem(flagKey);
         console.warn("auto-seed:", (e as Error).message);
       }
     })();

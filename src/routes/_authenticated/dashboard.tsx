@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
   TrendingUp,
@@ -9,9 +9,8 @@ import {
   DollarSign,
   Activity,
   Trophy,
-  Sparkles,
 } from "lucide-react";
-import { enrichExistingDemoData } from "@/lib/seed-sitios";
+import { resetAndSeedAll } from "@/lib/seed-sitios";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -80,25 +79,17 @@ const MXN = (n: number) =>
       ? `$${(n / 1_000).toFixed(0)}K`
       : `$${Math.round(n)}`;
 
+function etapaFallback(s: SitioConProfile) {
+  if (s.etapa) return s.etapa;
+  if (s.estatus_final) return "cerrado";
+  if (s.estatus === "prospecto") return "registro_inicial";
+  if (s.volumen_m3) return "en_seguimiento";
+  return "deteccion";
+}
+
 function DashboardPage() {
   const { profile, user } = useAuth();
-  const [enriching, setEnriching] = useState(false);
-
-  async function handleEnrich() {
-    if (!user) return;
-    setEnriching(true);
-    try {
-      const res = await enrichExistingDemoData(user);
-      toast.success(
-        `Datos demo: ${res.updated} sitios · ${res.interacciones} interacciones · ${res.obras} licitaciones · ${res.alertas} alertas`,
-      );
-      await load();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setEnriching(false);
-    }
-  }
+  const seedAttempted = useRef(false);
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
   const [obras, setObras] = useState<Array<{ id: string; nombre: string; estatus: string; ganador_sitio_id: string | null; competidor_ganador: string | null }>>([]);
   const [loading, setLoading] = useState(true);
@@ -106,8 +97,10 @@ function DashboardPage() {
   const [horizonte, setHorizonte] = useState<"6" | "12">("6");
 
   useEffect(() => {
+    if (!user) return;
     void load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function load() {
     setLoading(true);
@@ -121,9 +114,22 @@ function DashboardPage() {
         .select("id, nombre, estatus, ganador_sitio_id, competidor_ganador"),
     ]);
     if (resS.error) toast.error(resS.error.message);
-    else setSitios((resS.data as SitioConProfile[]) ?? []);
-    setObras((resO.data as typeof obras) ?? []);
+    const loadedSitios = resS.error ? [] : ((resS.data as SitioConProfile[]) ?? []);
+    setSitios(loadedSitios);
+    if (!resO.error) setObras((resO.data as typeof obras) ?? []);
+    else setObras([]);
     setLoading(false);
+
+    const hasClosed = loadedSitios.some((s) => !!s.estatus_final);
+    if (!resS.error && (loadedSitios.length < 20 || !hasClosed) && user && !seedAttempted.current) {
+      seedAttempted.current = true;
+      try {
+        const seeded = await resetAndSeedAll(user, profile?.zona_id ?? null);
+        if (seeded.sitios > 0) await load();
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
+    }
   }
 
   const meses = useMemo(() => lastNMonths(Number(horizonte)), [horizonte]);
@@ -205,7 +211,7 @@ function DashboardPage() {
       counts[k] = { etapa: label, n: 0, m3: 0 };
     });
     sitios.forEach((s) => {
-      const row = counts[s.etapa];
+      const row = counts[etapaFallback(s)];
       if (row) {
         row.n += 1;
         row.m3 += Number(s.volumen_m3) || 0;
@@ -307,9 +313,6 @@ function DashboardPage() {
               <SelectItem value="12">Últimos 12 m</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={handleEnrich} disabled={enriching || loading}>
-            <Sparkles className="h-4 w-4 mr-1" /> {enriching ? "Generando..." : "Datos demo"}
-          </Button>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading}>
             <Download className="h-4 w-4 mr-1" /> CSV
           </Button>

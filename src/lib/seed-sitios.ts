@@ -2,7 +2,6 @@ import {
   supabase,
   type SitioEstatus,
   type SitioEstatusFinal,
-  type SitioEtapa,
   type InteraccionTipo,
 } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -23,7 +22,7 @@ type Sample = {
   estatus_final?: SitioEstatusFinal;
   motivo_cierre?: string;
   competidor?: string;
-  etapa?: SitioEtapa;
+  etapa?: string;
   licitante?: string;
   obraTag?: string; // agrupa varios sitios bajo la misma obra/licitación
 };
@@ -114,13 +113,16 @@ function distributedCreatedAt(idx: number, total: number): Date {
 }
 
 // Cierres distribuidos en últimos 6 meses con tendencia positiva.
-function distributedCloseAt(createdAt: Date): Date {
+function distributedCloseAt(createdAt: Date, idx = 0): Date {
   const now = new Date();
-  const minMonths = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / (30 * 86400000)));
-  const monthsBack = Math.floor(Math.random() * Math.min(6, minMonths + 1));
-  const d = new Date();
-  d.setMonth(d.getMonth() - monthsBack);
-  d.setDate(1 + Math.floor(Math.random() * 27));
+  const minMonths = Math.max(
+    0,
+    Math.floor((now.getTime() - createdAt.getTime()) / (30 * 86400000)),
+  );
+  const monthsBack = Math.min(idx % 6, minMonths);
+  const d = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+  const maxDay = monthsBack === 0 ? Math.max(1, now.getDate()) : 27;
+  d.setDate(1 + (idx * 3) % maxDay);
   return d;
 }
 
@@ -148,12 +150,41 @@ interface InsertedRow {
   volumen_m3: number;
 }
 
-async function insertSitios(user: User, zonaId: string | null): Promise<InsertedRow[]> {
+interface SitiosCapabilities {
+  hasEtapa: boolean;
+  hasLicitante: boolean;
+  hasObraId: boolean;
+}
+
+async function detectSitiosCapabilities(): Promise<SitiosCapabilities> {
+  const defaults = { hasEtapa: false, hasLicitante: false, hasObraId: false };
+  const { data } = await supabase.from("sitios").select("*").limit(1);
+  const sample = data?.[0] as Record<string, unknown> | undefined;
+  if (!sample) return defaults;
+  return {
+    hasEtapa: "etapa" in sample,
+    hasLicitante: "licitante" in sample,
+    hasObraId: "obra_id" in sample,
+  };
+}
+
+function etapaFromSample(s: Sample): string {
+  if (s.estatus_final) return "cerrado";
+  if (s.etapa) return s.etapa;
+  if (s.estatus === "prospecto") return "registro_inicial";
+  return "en_seguimiento";
+}
+
+async function insertSitios(
+  user: User,
+  zonaId: string | null,
+  capabilities: SitiosCapabilities,
+): Promise<InsertedRow[]> {
   const total = SAMPLES.length;
   const rows = SAMPLES.map((s, i) => {
     const created = distributedCreatedAt(i, total);
-    const closed = s.estatus_final ? distributedCloseAt(created) : null;
-    return {
+    const closed = s.estatus_final ? distributedCloseAt(created, i) : null;
+    const row: Record<string, unknown> = {
       lat: s.lat,
       lng: s.lng,
       nombre_referencia: s.nombre,
@@ -169,9 +200,10 @@ async function insertSitios(user: User, zonaId: string | null): Promise<Inserted
       fecha_cierre: closed ? closed.toISOString() : null,
       created_at: created.toISOString(),
       updated_at: (closed ?? created).toISOString(),
-      etapa: s.etapa ?? (s.estatus_final ? "cerrado" : "registro_inicial"),
-      licitante: s.licitante ?? null,
     };
+    if (capabilities.hasEtapa) row.etapa = etapaFromSample(s);
+    if (capabilities.hasLicitante) row.licitante = s.licitante ?? null;
+    return row;
   });
 
   const { data, error } = await supabase
@@ -226,7 +258,8 @@ async function seedInteracciones(user: User, rows: InsertedRow[]) {
   return interacciones.length;
 }
 
-async function seedObras(user: User, rows: InsertedRow[]) {
+async function seedObras(user: User, rows: InsertedRow[], capabilities?: SitiosCapabilities) {
+  if (!capabilities?.hasObraId) return 0;
   const groups = new Map<string, InsertedRow[]>();
   rows.forEach((r) => {
     if (!r.obraTag) return;
@@ -299,9 +332,10 @@ async function seedAlertasInactividad(user: User, rows: InsertedRow[]) {
 }
 
 export async function seedSampleSitios({ user, zonaId }: SeedInput) {
-  const rows = await insertSitios(user, zonaId);
+  const capabilities = await detectSitiosCapabilities();
+  const rows = await insertSitios(user, zonaId, capabilities);
   await seedInteracciones(user, rows);
-  await seedObras(user, rows);
+  await seedObras(user, rows, capabilities);
   await seedAlertasInactividad(user, rows);
   return rows;
 }
@@ -312,14 +346,21 @@ export async function seedSampleSitios({ user, zonaId }: SeedInput) {
  * mapa, leads, alertas y dashboard se vean llenos.
  */
 export async function resetAndSeedAll(user: User, zonaId: string | null) {
+  const capabilities = await detectSitiosCapabilities();
   // 1. Obtener sitios actuales del usuario
+  const selectColumns = capabilities.hasObraId ? "id, obra_id" : "id";
   const { data: existing } = await supabase
     .from("sitios")
-    .select("id, obra_id")
+    .select(selectColumns)
     .eq("vendedor_id", user.id);
-  const ids = (existing ?? []).map((s) => s.id);
+  const existingRows = (existing ?? []) as unknown as Array<{ id: string; obra_id?: string | null }>;
+  const ids = existingRows.map((s) => s.id);
   const obraIds = Array.from(
-    new Set((existing ?? []).map((s) => s.obra_id).filter((x): x is string => !!x)),
+    new Set(
+      existingRows
+        .map((s) => s.obra_id)
+        .filter((x): x is string => !!x),
+    ),
   );
 
   if (ids.length > 0) {
@@ -328,13 +369,13 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
     await supabase.from("alertas").delete().eq("usuario_id", user.id);
     await supabase.from("sitios").delete().in("id", ids);
   }
-  if (obraIds.length > 0) {
+  if (capabilities.hasObraId && obraIds.length > 0) {
     await supabase.from("obras").delete().in("id", obraIds);
   }
 
-  const rows = await insertSitios(user, zonaId);
+  const rows = await insertSitios(user, zonaId, capabilities);
   const interacciones = await seedInteracciones(user, rows);
-  const obras = await seedObras(user, rows);
+  const obras = await seedObras(user, rows, capabilities);
   const alertas = await seedAlertasInactividad(user, rows);
   return { sitios: rows.length, interacciones, obras, alertas };
 }
