@@ -98,6 +98,7 @@ function DashboardPage() {
     }
   }
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
+  const [obras, setObras] = useState<Array<{ id: string; nombre: string; estatus: string; ganador_sitio_id: string | null; competidor_ganador: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [precio, setPrecio] = useState(PRECIO_DEFAULT);
   const [horizonte, setHorizonte] = useState<"6" | "12">("6");
@@ -108,12 +109,18 @@ function DashboardPage() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    else setSitios((data as SitioConProfile[]) ?? []);
+    const [resS, resO] = await Promise.all([
+      supabase
+        .from("sitios")
+        .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("obras")
+        .select("id, nombre, estatus, ganador_sitio_id, competidor_ganador"),
+    ]);
+    if (resS.error) toast.error(resS.error.message);
+    else setSitios((resS.data as SitioConProfile[]) ?? []);
+    setObras((resO.data as typeof obras) ?? []);
     setLoading(false);
   }
 
