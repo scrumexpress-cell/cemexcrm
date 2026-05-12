@@ -46,6 +46,7 @@ export interface Sitio {
   competidor: string | null;
   notas: string | null;
   obra_id: string | null;
+  licitante: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,7 @@ export interface Obra {
   ganador_sitio_id: string | null;
   fecha_cierre: string | null;
   motivo_cierre: string | null;
+  competidor_ganador: string | null;
   created_at: string;
   updated_at: string;
 }
