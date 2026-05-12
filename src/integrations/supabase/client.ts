@@ -62,6 +62,7 @@ export interface Obra {
   ganador_sitio_id: string | null;
   fecha_cierre: string | null;
   motivo_cierre: string | null;
+  competidor_ganador: string | null;
   created_at: string;
   updated_at: string;
 }
