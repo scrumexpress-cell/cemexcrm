@@ -60,6 +60,7 @@ export function MapView({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [viewCenter, setViewCenter] = useState<[number, number]>(center);
   const [viewZoom, setViewZoom] = useState(Math.round(zoom));
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedToken = getMapboxToken();
