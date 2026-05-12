@@ -9,7 +9,9 @@ import {
   DollarSign,
   Activity,
   Trophy,
+  Sparkles,
 } from "lucide-react";
+import { enrichExistingDemoData } from "@/lib/seed-sitios";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -79,7 +81,22 @@ const MXN = (n: number) =>
       : `$${Math.round(n)}`;
 
 function DashboardPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const [enriching, setEnriching] = useState(false);
+
+  async function handleEnrich() {
+    if (!user) return;
+    setEnriching(true);
+    try {
+      const res = await enrichExistingDemoData(user);
+      toast.success(`Datos demo redistribuidos: ${res.updated} sitios, ${res.interacciones} interacciones`);
+      await load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnriching(false);
+    }
+  }
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [precio, setPrecio] = useState(PRECIO_DEFAULT);
@@ -260,6 +277,9 @@ function DashboardPage() {
               <SelectItem value="12">Últimos 12 m</SelectItem>
             </SelectContent>
           </Select>
+          <Button size="sm" variant="outline" onClick={handleEnrich} disabled={enriching || loading}>
+            <Sparkles className="h-4 w-4 mr-1" /> {enriching ? "Generando..." : "Datos demo"}
+          </Button>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading}>
             <Download className="h-4 w-4 mr-1" /> CSV
           </Button>
