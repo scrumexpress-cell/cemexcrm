@@ -1,12 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import mapboxgl, { type Map as MapboxMap, type Marker, type Popup } from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import type { Map as MapboxMap, Marker, Popup } from "mapbox-gl";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
 import { Factory, Box, Flame, Clock } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
+
+type MapboxModule = typeof import("mapbox-gl");
+let mapboxglRef: MapboxModule["default"] | null = null;
+let mapboxglPromise: Promise<MapboxModule["default"]> | null = null;
+function loadMapbox(): Promise<MapboxModule["default"]> {
+  if (typeof window === "undefined") return Promise.reject(new Error("ssr"));
+  if (mapboxglRef) return Promise.resolve(mapboxglRef);
+  if (!mapboxglPromise) {
+    mapboxglPromise = (async () => {
+      await import("mapbox-gl/dist/mapbox-gl.css");
+      const mod = await import("mapbox-gl");
+      mapboxglRef = mod.default;
+      return mod.default;
+    })();
+  }
+  return mapboxglPromise;
+}
 
 export type MapSitio = Sitio & {
   vendedor?: { nombre: string | null; email: string | null } | null;
