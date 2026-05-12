@@ -155,6 +155,17 @@ function LeadsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterSeguimiento} onValueChange={setFilterSeguimiento}>
+          <SelectTrigger className="h-9 w-[200px] shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todo el seguimiento</SelectItem>
+            <SelectItem value="stale7">Sin seguimiento ≥ 7 días</SelectItem>
+            <SelectItem value="stale14">Sin seguimiento ≥ 14 días</SelectItem>
+            <SelectItem value="stale30">Sin seguimiento ≥ 30 días</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
