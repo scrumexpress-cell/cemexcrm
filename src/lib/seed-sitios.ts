@@ -2,7 +2,6 @@ import {
   supabase,
   type SitioEstatus,
   type SitioEstatusFinal,
-  type SitioEtapa,
   type InteraccionTipo,
 } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -23,7 +22,7 @@ type Sample = {
   estatus_final?: SitioEstatusFinal;
   motivo_cierre?: string;
   competidor?: string;
-  etapa?: SitioEtapa;
+  etapa?: string;
   licitante?: string;
   obraTag?: string; // agrupa varios sitios bajo la misma obra/licitación
 };
@@ -114,13 +113,17 @@ function distributedCreatedAt(idx: number, total: number): Date {
 }
 
 // Cierres distribuidos en últimos 6 meses con tendencia positiva.
-function distributedCloseAt(createdAt: Date): Date {
+function distributedCloseAt(createdAt: Date, idx = 0): Date {
   const now = new Date();
-  const minMonths = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / (30 * 86400000)));
-  const monthsBack = Math.floor(Math.random() * Math.min(6, minMonths + 1));
-  const d = new Date();
+  const minMonths = Math.max(
+    0,
+    Math.floor((now.getTime() - createdAt.getTime()) / (30 * 86400000)),
+  );
+  const monthsBack = Math.min(idx % 6, minMonths);
+  const d = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
   d.setMonth(d.getMonth() - monthsBack);
-  d.setDate(1 + Math.floor(Math.random() * 27));
+  const maxDay = monthsBack === 0 ? Math.max(1, now.getDate()) : 27;
+  d.setDate(1 + (idx * 3) % maxDay);
   return d;
 }
 
