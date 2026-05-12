@@ -151,12 +151,41 @@ interface InsertedRow {
   volumen_m3: number;
 }
 
-async function insertSitios(user: User, zonaId: string | null): Promise<InsertedRow[]> {
+interface SitiosCapabilities {
+  hasEtapa: boolean;
+  hasLicitante: boolean;
+  hasObraId: boolean;
+}
+
+async function detectSitiosCapabilities(): Promise<SitiosCapabilities> {
+  const defaults = { hasEtapa: false, hasLicitante: false, hasObraId: false };
+  const { data } = await supabase.from("sitios").select("*").limit(1);
+  const sample = data?.[0] as Record<string, unknown> | undefined;
+  if (!sample) return defaults;
+  return {
+    hasEtapa: "etapa" in sample,
+    hasLicitante: "licitante" in sample,
+    hasObraId: "obra_id" in sample,
+  };
+}
+
+function etapaFromSample(s: Sample): string {
+  if (s.estatus_final) return "cerrado";
+  if (s.etapa) return s.etapa;
+  if (s.estatus === "prospecto") return "registro_inicial";
+  return "en_seguimiento";
+}
+
+async function insertSitios(
+  user: User,
+  zonaId: string | null,
+  capabilities: SitiosCapabilities,
+): Promise<InsertedRow[]> {
   const total = SAMPLES.length;
   const rows = SAMPLES.map((s, i) => {
     const created = distributedCreatedAt(i, total);
-    const closed = s.estatus_final ? distributedCloseAt(created) : null;
-    return {
+    const closed = s.estatus_final ? distributedCloseAt(created, i) : null;
+    const row: Record<string, unknown> = {
       lat: s.lat,
       lng: s.lng,
       nombre_referencia: s.nombre,
@@ -172,9 +201,10 @@ async function insertSitios(user: User, zonaId: string | null): Promise<Inserted
       fecha_cierre: closed ? closed.toISOString() : null,
       created_at: created.toISOString(),
       updated_at: (closed ?? created).toISOString(),
-      etapa: s.etapa ?? (s.estatus_final ? "cerrado" : "registro_inicial"),
-      licitante: s.licitante ?? null,
     };
+    if (capabilities.hasEtapa) row.etapa = etapaFromSample(s);
+    if (capabilities.hasLicitante) row.licitante = s.licitante ?? null;
+    return row;
   });
 
   const { data, error } = await supabase
