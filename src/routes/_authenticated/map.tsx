@@ -152,6 +152,18 @@ function MapPage() {
             <SelectItem value="5000+">5,000+ m³</SelectItem>
           </SelectContent>
         </Select>
+        {!loading && sitios.length === 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+            onClick={handleSeed}
+            disabled={seeding}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {seeding ? "Cargando..." : "10 ejemplos"}
+          </Button>
+        )}
         <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
           {loading ? "..." : `${filtered.length} sitios`}
         </div>
