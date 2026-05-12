@@ -12,6 +12,7 @@ interface Props {
   className?: string;
   draggableMarker?: { lng: number; lat: number };
   onMarkerDrag?: (lng: number, lat: number) => void;
+  currentUserId?: string | null;
 }
 
 const GDL: [number, number] = [-103.3496, 20.6597];
