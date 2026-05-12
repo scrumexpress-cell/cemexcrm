@@ -66,7 +66,7 @@ function MapPage() {
   }, [sitios, filterEstatus, filterVolumen]);
 
   return (
-    <div className="flex-1 flex flex-col relative">
+    <div className="flex-1 min-h-0 flex flex-col relative">
       <div className="px-3 py-2 border-b bg-card flex gap-2 overflow-x-auto">
         <Select value={filterEstatus} onValueChange={setFilterEstatus}>
           <SelectTrigger className="h-9 w-[160px] shrink-0">
@@ -98,11 +98,11 @@ function MapPage() {
         </div>
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
           sitios={filtered}
           onPinClick={(s) => setSelected(s)}
-          className="absolute inset-0"
+          className="absolute inset-0 h-full w-full"
         />
         <button
           onClick={() => navigate({ to: "/sitios/nuevo" })}
