@@ -46,6 +46,7 @@ export interface Sitio {
   competidor: string | null;
   notas: string | null;
   obra_id: string | null;
+  licitante: string | null;
   created_at: string;
   updated_at: string;
 }
