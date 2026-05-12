@@ -1,7 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Check, Crosshair } from "lucide-react";
 import { MapView } from "@/components/MapView";
+import { NewSitioDialog } from "@/components/NewSitioDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,12 +25,14 @@ export const Route = createFileRoute("/_authenticated/map")({
 });
 
 function MapPage() {
-  const navigate = useNavigate();
   const [sitios, setSitios] = useState<Sitio[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
   const [filterVolumen, setFilterVolumen] = useState<string>("all");
   const [selected, setSelected] = useState<Sitio | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     void load();
@@ -64,6 +67,44 @@ function MapPage() {
       return true;
     });
   }, [sitios, filterEstatus, filterVolumen]);
+
+  function startPlacing() {
+    setSelected(null);
+    setPlaceCoords(null);
+    setPlacing(true);
+
+    if (navigator.geolocation && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" as PermissionName })
+        .then((status) => {
+          if (status.state === "granted") {
+            navigator.geolocation.getCurrentPosition(
+              (pos) =>
+                setPlaceCoords({
+                  lng: pos.coords.longitude,
+                  lat: pos.coords.latitude,
+                }),
+              () => {},
+              { enableHighAccuracy: true, timeout: 8000 },
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }
+
+  function cancelPlacing() {
+    setPlacing(false);
+    setPlaceCoords(null);
+  }
+
+  function confirmPlacing() {
+    if (!placeCoords) {
+      toast.error("Toca el mapa para fijar la ubicación");
+      return;
+    }
+    setDialogOpen(true);
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col relative">
@@ -100,20 +141,75 @@ function MapPage() {
 
       <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
-          sitios={filtered}
-          onPinClick={(s) => setSelected(s)}
+          sitios={placing ? [] : filtered}
+          onPinClick={(s) => !placing && setSelected(s)}
+          onMapClick={(lng, lat) => {
+            if (placing) setPlaceCoords({ lng, lat });
+          }}
+          draggableMarker={placing && placeCoords ? placeCoords : undefined}
+          onMarkerDrag={(lng, lat) => setPlaceCoords({ lng, lat })}
           className="absolute inset-0 h-full w-full"
         />
-        <button
-          onClick={() => navigate({ to: "/sitios/nuevo" })}
-          className="absolute bottom-6 right-6 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
-          aria-label="Nuevo sitio"
-        >
-          <Plus className="h-8 w-8" strokeWidth={2.5} />
-        </button>
+
+        {placing && (
+          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm">
+            <div className="font-medium">Ubica el nuevo sitio</div>
+            <div className="text-xs text-muted-foreground">
+              Toca el mapa o arrastra el pin azul para fijar el punto.
+            </div>
+          </div>
+        )}
+
+        {!placing && (
+          <button
+            onClick={startPlacing}
+            className="absolute bottom-6 right-6 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Nuevo sitio"
+          >
+            <Plus className="h-8 w-8" strokeWidth={2.5} />
+          </button>
+        )}
+
+        {placing && (
+          <div className="absolute bottom-6 inset-x-4 z-10 flex gap-2">
+            <Button
+              variant="secondary"
+              className="flex-1 h-12 shadow-lg"
+              onClick={cancelPlacing}
+            >
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 shadow-lg bg-card"
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition(
+                  (pos) =>
+                    setPlaceCoords({
+                      lng: pos.coords.longitude,
+                      lat: pos.coords.latitude,
+                    }),
+                  (err) => toast.error(`GPS: ${err.message}`),
+                  { enableHighAccuracy: true, timeout: 10000 },
+                );
+              }}
+              aria-label="Usar mi ubicación"
+            >
+              <Crosshair className="h-4 w-4" />
+            </Button>
+            <Button
+              className="flex-1 h-12 shadow-lg"
+              onClick={confirmPlacing}
+              disabled={!placeCoords}
+            >
+              <Check className="h-4 w-4 mr-1" /> Continuar
+            </Button>
+          </div>
+        )}
       </div>
 
-      {selected && (
+      {selected && !placing && (
         <div className="absolute inset-x-0 bottom-0 z-20 bg-card border-t rounded-t-2xl shadow-2xl p-4 pb-6 animate-in slide-in-from-bottom">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
@@ -156,6 +252,18 @@ function MapPage() {
           </Link>
         </div>
       )}
+
+      <NewSitioDialog
+        open={dialogOpen}
+        coords={placeCoords}
+        onOpenChange={setDialogOpen}
+        onCreated={() => {
+          setDialogOpen(false);
+          setPlacing(false);
+          setPlaceCoords(null);
+          void load();
+        }}
+      />
     </div>
   );
 }
