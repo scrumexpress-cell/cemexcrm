@@ -43,6 +43,14 @@ const ETAPA_ACCENT: Record<SitioEtapa, string> = {
   cerrado: "border-t-emerald-600",
 };
 
+function getEtapa(s: SitioConProfile): SitioEtapa {
+  if (s.etapa && ETAPAS.includes(s.etapa)) return s.etapa;
+  if (s.estatus_final) return "cerrado";
+  if (s.estatus === "prospecto") return "registro_inicial";
+  if (s.estatus === "movimiento_de_tierra") return "info_completa";
+  return "en_seguimiento";
+}
+
 function LeadsPage() {
   const { profile } = useAuth();
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
@@ -110,7 +118,7 @@ function LeadsPage() {
       en_seguimiento: [],
       cerrado: [],
     };
-    for (const s of filtered) map[s.etapa]?.push(s);
+    for (const s of filtered) map[getEtapa(s)].push(s);
     return map;
   }, [filtered]);
 
