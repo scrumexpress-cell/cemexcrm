@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 interface SitioConProfile extends Sitio {
   profiles?: { nombre: string | null; email: string | null } | null;
+  zona?: { nombre: string | null } | null;
 }
 
 function DashboardPage() {
@@ -28,7 +29,7 @@ function DashboardPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email)")
+      .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     else setSitios((data as SitioConProfile[]) ?? []);
