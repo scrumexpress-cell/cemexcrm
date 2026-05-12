@@ -20,6 +20,12 @@ export type SitioEstatus =
   | "en_proceso"
   | "movimiento_de_tierra";
 export type SitioEstatusFinal = "ganado" | "perdido" | "pospuesto" | "inactivo";
+export type SitioEtapa =
+  | "deteccion"
+  | "registro_inicial"
+  | "info_completa"
+  | "en_seguimiento"
+  | "cerrado";
 
 export interface Profile {
   id: string;
@@ -47,6 +53,7 @@ export interface Sitio {
   notas: string | null;
   obra_id: string | null;
   licitante: string | null;
+  etapa: SitioEtapa;
   created_at: string;
   updated_at: string;
 }
