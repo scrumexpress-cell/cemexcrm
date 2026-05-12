@@ -55,6 +55,13 @@ export function MapView({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; center: [number, number]; moved: boolean } | null>(null);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{
+    initialDist: number;
+    initialZoom: number;
+    initialCenter: [number, number];
+    midClient: { x: number; y: number };
+  } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [tokenMissing, setTokenMissing] = useState(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
