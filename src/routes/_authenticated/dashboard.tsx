@@ -79,6 +79,14 @@ const MXN = (n: number) =>
       ? `$${(n / 1_000).toFixed(0)}K`
       : `$${Math.round(n)}`;
 
+function etapaFallback(s: SitioConProfile) {
+  if (s.etapa) return s.etapa;
+  if (s.estatus_final) return "cerrado";
+  if (s.estatus === "prospecto") return "registro_inicial";
+  if (s.volumen_m3) return "en_seguimiento";
+  return "deteccion";
+}
+
 function DashboardPage() {
   const { profile, user } = useAuth();
   const seedAttempted = useRef(false);
@@ -112,7 +120,8 @@ function DashboardPage() {
     else setObras([]);
     setLoading(false);
 
-    if (!resS.error && loadedSitios.length === 0 && user && !seedAttempted.current) {
+    const hasClosed = loadedSitios.some((s) => !!s.estatus_final);
+    if (!resS.error && (loadedSitios.length < 20 || !hasClosed) && user && !seedAttempted.current) {
       seedAttempted.current = true;
       try {
         const seeded = await resetAndSeedAll(user, profile?.zona_id ?? null);
@@ -202,7 +211,7 @@ function DashboardPage() {
       counts[k] = { etapa: label, n: 0, m3: 0 };
     });
     sitios.forEach((s) => {
-      const row = counts[s.etapa];
+      const row = counts[etapaFallback(s)];
       if (row) {
         row.n += 1;
         row.m3 += Number(s.volumen_m3) || 0;
