@@ -346,14 +346,20 @@ export async function seedSampleSitios({ user, zonaId }: SeedInput) {
  * mapa, leads, alertas y dashboard se vean llenos.
  */
 export async function resetAndSeedAll(user: User, zonaId: string | null) {
+  const capabilities = await detectSitiosCapabilities();
   // 1. Obtener sitios actuales del usuario
+  const selectColumns = capabilities.hasObraId ? "id, obra_id" : "id";
   const { data: existing } = await supabase
     .from("sitios")
-    .select("id, obra_id")
+    .select(selectColumns)
     .eq("vendedor_id", user.id);
   const ids = (existing ?? []).map((s) => s.id);
   const obraIds = Array.from(
-    new Set((existing ?? []).map((s) => s.obra_id).filter((x): x is string => !!x)),
+    new Set(
+      ((existing ?? []) as Array<{ obra_id?: string | null }>)
+        .map((s) => s.obra_id)
+        .filter((x): x is string => !!x),
+    ),
   );
 
   if (ids.length > 0) {
@@ -362,11 +368,10 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
     await supabase.from("alertas").delete().eq("usuario_id", user.id);
     await supabase.from("sitios").delete().in("id", ids);
   }
-  if (obraIds.length > 0) {
+  if (capabilities.hasObraId && obraIds.length > 0) {
     await supabase.from("obras").delete().in("id", obraIds);
   }
 
-  const capabilities = await detectSitiosCapabilities();
   const rows = await insertSitios(user, zonaId, capabilities);
   const interacciones = await seedInteracciones(user, rows);
   const obras = await seedObras(user, rows, capabilities);
