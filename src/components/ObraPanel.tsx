@@ -31,9 +31,13 @@ const ESTATUS_LABEL: Record<Obra["estatus"], string> = {
   cancelada: "Cancelada",
 };
 
+type Hermano = Sitio & {
+  vendedor?: { nombre: string | null; email: string | null } | null;
+};
+
 export function ObraPanel({ sitio, onChanged }: Props) {
   const [obra, setObra] = useState<Obra | null>(null);
-  const [hermanos, setHermanos] = useState<Sitio[]>([]);
+  const [hermanos, setHermanos] = useState<Hermano[]>([]);
   const [allObras, setAllObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,6 +46,7 @@ export function ObraPanel({ sitio, onChanged }: Props) {
   const [newDesc, setNewDesc] = useState("");
   const [linkObraId, setLinkObraId] = useState<string>("");
   const [closeMotivo, setCloseMotivo] = useState("");
+  const [competidorGanador, setCompetidorGanador] = useState("");
 
   useEffect(() => {
     void load();
@@ -55,12 +60,12 @@ export function ObraPanel({ sitio, onChanged }: Props) {
         supabase.from("obras").select("*").eq("id", sitio.obra_id).maybeSingle(),
         supabase
           .from("sitios")
-          .select("*")
+          .select("*, vendedor:vendedor_id(nombre,email)")
           .eq("obra_id", sitio.obra_id)
           .order("created_at", { ascending: false }),
       ]);
       setObra((o as Obra) ?? null);
-      setHermanos((hs as Sitio[]) ?? []);
+      setHermanos((hs as unknown as Hermano[]) ?? []);
     } else {
       setObra(null);
       setHermanos([]);
