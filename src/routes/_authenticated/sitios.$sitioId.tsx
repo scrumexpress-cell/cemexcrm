@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ObraPanel } from "@/components/ObraPanel";
+import { EtapaStepper } from "@/components/EtapaStepper";
 import {
   Select,
   SelectContent,
@@ -212,6 +213,10 @@ function SitioDetailPage() {
       >
         <ArrowLeft className="h-4 w-4 mr-1" /> Mapa
       </Button>
+
+      <div className="mb-3">
+        <EtapaStepper etapa={sitio.etapa} />
+      </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
         <Badge
