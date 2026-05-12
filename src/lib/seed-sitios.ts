@@ -2,6 +2,7 @@ import {
   supabase,
   type SitioEstatus,
   type SitioEstatusFinal,
+  type InteraccionTipo,
 } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -92,27 +93,166 @@ const SAMPLES: Sample[] = [
   { nombre: "Estadio Akron Renovación", direccion: "Av. Vallarta 5500, Zapopan", estatus: "en_proceso", volumen: 7200, notas: "Renovación de gradas", lng: -103.4623, lat: 20.6823, estatus_final: "ganado", motivo_cierre: "Adjudicación directa" },
 ];
 
-export async function seedSampleSitios({ user, zonaId }: SeedInput) {
-  const now = Date.now();
-  const rows = SAMPLES.map((s) => ({
-    lat: s.lat,
-    lng: s.lng,
-    nombre_referencia: s.nombre,
-    direccion: s.direccion,
-    estatus: s.estatus,
-    volumen_m3: s.volumen,
-    notas: s.notas,
-    vendedor_id: user.id,
-    zona_id: zonaId,
-    competidor: s.competidor ?? null,
-    estatus_final: s.estatus_final ?? null,
-    motivo_cierre: s.motivo_cierre ?? null,
-    fecha_cierre: s.estatus_final
-      ? new Date(now - Math.floor(Math.random() * 60) * 86400000).toISOString()
-      : null,
-  }));
+// Distribuye fechas a lo largo de los últimos 10 meses con más densidad
+// en meses recientes (curva creciente para mostrar tendencia ejecutiva).
+function distributedCreatedAt(idx: number, total: number): Date {
+  const monthsBack = Math.floor(((total - idx) / total) * 9 + Math.random() * 1.5);
+  const d = new Date();
+  d.setMonth(d.getMonth() - monthsBack);
+  d.setDate(1 + Math.floor(Math.random() * 27));
+  d.setHours(Math.floor(Math.random() * 23), Math.floor(Math.random() * 59));
+  return d;
+}
 
-  const { data, error } = await supabase.from("sitios").insert(rows).select();
+// Cierres distribuidos en últimos 6 meses con tendencia positiva.
+function distributedCloseAt(createdAt: Date): Date {
+  const now = new Date();
+  const minMonths = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / (30 * 86400000)));
+  const monthsBack = Math.floor(Math.random() * Math.min(6, minMonths + 1));
+  const d = new Date();
+  d.setMonth(d.getMonth() - monthsBack);
+  d.setDate(1 + Math.floor(Math.random() * 27));
+  return d;
+}
+
+const TIPOS: InteraccionTipo[] = ["llamada", "visita", "whatsapp", "cotizacion", "muestra"];
+const RESULTADOS = [
+  "Cliente interesado, pide propuesta formal",
+  "Re-agendar visita la próxima semana",
+  "Compartió plano de obra",
+  "Pidió ajuste de precio",
+  "Comparando con competencia",
+  "Aprobado por dirección de obra",
+  "Sin respuesta",
+  "Confirma volumen estimado",
+];
+
+export async function seedSampleSitios({ user, zonaId }: SeedInput) {
+  const total = SAMPLES.length;
+  const rows = SAMPLES.map((s, i) => {
+    const created = distributedCreatedAt(i, total);
+    const closed = s.estatus_final ? distributedCloseAt(created) : null;
+    return {
+      lat: s.lat,
+      lng: s.lng,
+      nombre_referencia: s.nombre,
+      direccion: s.direccion,
+      estatus: s.estatus,
+      volumen_m3: s.volumen,
+      notas: s.notas,
+      vendedor_id: user.id,
+      zona_id: zonaId,
+      competidor: s.competidor ?? null,
+      estatus_final: s.estatus_final ?? null,
+      motivo_cierre: s.motivo_cierre ?? null,
+      fecha_cierre: closed ? closed.toISOString() : null,
+      created_at: created.toISOString(),
+      updated_at: (closed ?? created).toISOString(),
+    };
+  });
+
+  const { data, error } = await supabase.from("sitios").insert(rows).select("id, created_at, fecha_cierre");
   if (error) throw error;
+
+  // Sembrar interacciones distribuidas entre created_at y fecha_cierre (o ahora).
+  const interacciones: Array<{
+    sitio_id: string;
+    vendedor_id: string;
+    tipo: InteraccionTipo;
+    resultado: string;
+    notas: string | null;
+    fecha: string;
+  }> = [];
+  (data ?? []).forEach((row) => {
+    const start = new Date(row.created_at).getTime();
+    const end = row.fecha_cierre ? new Date(row.fecha_cierre).getTime() : Date.now();
+    const span = Math.max(86400000, end - start);
+    const n = 1 + Math.floor(Math.random() * 4);
+    for (let k = 0; k < n; k++) {
+      const t = start + Math.random() * span;
+      interacciones.push({
+        sitio_id: row.id,
+        vendedor_id: user.id,
+        tipo: TIPOS[Math.floor(Math.random() * TIPOS.length)],
+        resultado: RESULTADOS[Math.floor(Math.random() * RESULTADOS.length)],
+        notas: null,
+        fecha: new Date(t).toISOString(),
+      });
+    }
+  });
+  if (interacciones.length > 0) {
+    const { error: iErr } = await supabase.from("interacciones").insert(interacciones);
+    if (iErr) console.warn("interacciones seed:", iErr.message);
+  }
+
   return data;
+}
+
+/**
+ * Re-distribuye fechas e inserta interacciones en sitios ya existentes del usuario,
+ * para que las gráficas mes-a-mes tengan datos significativos sin duplicar registros.
+ */
+export async function enrichExistingDemoData(user: User) {
+  const { data: existing, error } = await supabase
+    .from("sitios")
+    .select("id, estatus_final, created_at")
+    .eq("vendedor_id", user.id);
+  if (error) throw error;
+  if (!existing || existing.length === 0) return { updated: 0, interacciones: 0 };
+
+  const total = existing.length;
+  let updated = 0;
+  for (let i = 0; i < total; i++) {
+    const s = existing[i];
+    const created = distributedCreatedAt(i, total);
+    const closed = s.estatus_final ? distributedCloseAt(created) : null;
+    const { error: uErr } = await supabase
+      .from("sitios")
+      .update({
+        created_at: created.toISOString(),
+        fecha_cierre: closed ? closed.toISOString() : null,
+        updated_at: (closed ?? created).toISOString(),
+      })
+      .eq("id", s.id);
+    if (!uErr) updated += 1;
+  }
+
+  // Limpia interacciones previas del usuario y resiembra
+  const ids = existing.map((s) => s.id);
+  await supabase.from("interacciones").delete().in("sitio_id", ids);
+
+  const { data: refreshed } = await supabase
+    .from("sitios")
+    .select("id, created_at, fecha_cierre")
+    .in("id", ids);
+
+  const interacciones: Array<{
+    sitio_id: string;
+    vendedor_id: string;
+    tipo: InteraccionTipo;
+    resultado: string;
+    notas: string | null;
+    fecha: string;
+  }> = [];
+  (refreshed ?? []).forEach((row) => {
+    const start = new Date(row.created_at).getTime();
+    const end = row.fecha_cierre ? new Date(row.fecha_cierre).getTime() : Date.now();
+    const span = Math.max(86400000, end - start);
+    const n = 1 + Math.floor(Math.random() * 4);
+    for (let k = 0; k < n; k++) {
+      const t = start + Math.random() * span;
+      interacciones.push({
+        sitio_id: row.id,
+        vendedor_id: user.id,
+        tipo: TIPOS[Math.floor(Math.random() * TIPOS.length)],
+        resultado: RESULTADOS[Math.floor(Math.random() * RESULTADOS.length)],
+        notas: null,
+        fecha: new Date(t).toISOString(),
+      });
+    }
+  });
+  if (interacciones.length > 0) {
+    await supabase.from("interacciones").insert(interacciones);
+  }
+  return { updated, interacciones: interacciones.length };
 }
