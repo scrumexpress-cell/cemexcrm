@@ -572,6 +572,88 @@ function DashboardPage() {
               </div>
             </div>
           )}
+
+          {licitaciones.length > 0 && (
+            <div className="bg-card border rounded-2xl p-5 mt-4">
+              <h2 className="font-semibold text-sm mb-1">Licitaciones activas</h2>
+              <p className="text-[11px] text-muted-foreground mb-4">
+                Obras con varios licitantes — quién atendió y resultado final
+              </p>
+              <div className="space-y-4">
+                {licitaciones.map(({ obra, items, m3, ganador }) => {
+                  const estatusTone =
+                    obra.estatus === "ganada"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      : obra.estatus === "perdida"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : obra.estatus === "cancelada"
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-amber-100 text-amber-700 border-amber-200";
+                  return (
+                    <div key={obra.id} className="border rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm truncate">{obra.nombre}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {items.length} licitantes · {m3.toLocaleString()} m³ · proyecta {MXN(m3 * precio)}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md border uppercase tracking-wide ${estatusTone}`}>
+                          {obra.estatus}
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto -mx-3 px-3">
+                        <table className="w-full text-xs">
+                          <thead className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            <tr className="border-b">
+                              <th className="text-left py-1.5">Licitante</th>
+                              <th className="text-left py-1.5">Vendedor</th>
+                              <th className="text-right py-1.5">m³</th>
+                              <th className="text-left py-1.5 pl-2">Resultado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((s) => {
+                              const esGanador = ganador?.id === s.id;
+                              return (
+                                <tr key={s.id} className={`border-b last:border-0 ${esGanador ? "bg-emerald-50" : ""}`}>
+                                  <td className="py-1.5 truncate max-w-[160px]">
+                                    {s.licitante ?? s.nombre_referencia ?? "—"}
+                                  </td>
+                                  <td className="py-1.5 truncate max-w-[140px] text-muted-foreground">
+                                    {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
+                                  </td>
+                                  <td className="py-1.5 text-right tabular-nums">
+                                    {(Number(s.volumen_m3) || 0).toLocaleString()}
+                                  </td>
+                                  <td className="py-1.5 pl-2">
+                                    {esGanador ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                                        <Trophy className="h-3 w-3" /> Ganó
+                                      </span>
+                                    ) : s.estatus_final ? (
+                                      <span className="text-muted-foreground capitalize">{s.estatus_final}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">en curso</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {obra.estatus !== "abierta" && obra.competidor_ganador && !ganador && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Ganada por competidor: <span className="font-medium">{obra.competidor_ganador}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
