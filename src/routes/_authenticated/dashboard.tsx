@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 interface SitioConProfile extends Sitio {
   profiles?: { nombre: string | null; email: string | null } | null;
+  zona?: { nombre: string | null } | null;
 }
 
 function DashboardPage() {
@@ -28,7 +29,7 @@ function DashboardPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("sitios")
-      .select("*, profiles:vendedor_id(nombre,email)")
+      .select("*, profiles:vendedor_id(nombre,email), zona:zona_id(nombre)")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     else setSitios((data as SitioConProfile[]) ?? []);
@@ -89,6 +90,30 @@ function DashboardPage() {
     return [...map.values()].sort((a, b) => b.m3 - a.m3 || b.ganados - a.ganados);
   }, [sitios]);
 
+  // Breakdown por zona (head)
+  const porZona = useMemo(() => {
+    const map = new Map<
+      string,
+      { nombre: string; abiertos: number; ganados: number; m3Abierto: number; m3Ganado: number }
+    >();
+    sitios.forEach((s) => {
+      const key = s.zona_id ?? "sin-zona";
+      const nombre = s.zona?.nombre ?? "Sin zona";
+      const cur =
+        map.get(key) ?? { nombre, abiertos: 0, ganados: 0, m3Abierto: 0, m3Ganado: 0 };
+      if (!s.estatus_final) {
+        cur.abiertos += 1;
+        cur.m3Abierto += Number(s.volumen_m3) || 0;
+      }
+      if (s.estatus_final === "ganado") {
+        cur.ganados += 1;
+        cur.m3Ganado += Number(s.volumen_m3) || 0;
+      }
+      map.set(key, cur);
+    });
+    return [...map.values()].sort((a, b) => b.m3Abierto - a.m3Abierto);
+  }, [sitios]);
+
   function exportCsv() {
     const headers = [
       "id",
@@ -140,6 +165,7 @@ function DashboardPage() {
   }
 
   const isVendedor = profile?.role === "vendedor";
+  const isHead = profile?.role === "head";
 
   return (
     <div className="flex-1 px-4 py-4 max-w-3xl w-full mx-auto">
@@ -193,6 +219,40 @@ function DashboardPage() {
               })}
             </div>
           </div>
+
+          {isHead && (
+            <div className="bg-card border rounded-xl p-4 mb-4">
+              <h2 className="font-semibold mb-3 text-sm">Oportunidades por zona</h2>
+              <div className="overflow-x-auto -mx-4 px-4">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr className="border-b">
+                      <th className="text-left py-2">Zona</th>
+                      <th className="text-right py-2">Abiertos</th>
+                      <th className="text-right py-2">m³ pipeline</th>
+                      <th className="text-right py-2">Ganados</th>
+                      <th className="text-right py-2">m³ ganados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {porZona.map((z, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="py-2 truncate max-w-[160px]">{z.nombre}</td>
+                        <td className="text-right tabular-nums">{z.abiertos}</td>
+                        <td className="text-right tabular-nums font-medium">
+                          {z.m3Abierto.toLocaleString()}
+                        </td>
+                        <td className="text-right tabular-nums">{z.ganados}</td>
+                        <td className="text-right tabular-nums">
+                          {z.m3Ganado.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {!isVendedor && (
             <div className="bg-card border rounded-xl p-4">

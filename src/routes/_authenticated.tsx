@@ -9,7 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, MapIcon, Bell, BarChart3 } from "lucide-react";
+import { LogOut, MapIcon, Bell, BarChart3, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import cemexLogo from "@/assets/cemex-logo.jpg";
 
@@ -62,13 +62,14 @@ function AuthLayout() {
   }
 
   const path = location.pathname;
+  const role = profile?.role ?? "vendedor";
   const NavLink = ({
     to,
     icon: Icon,
     label,
     badge,
   }: {
-    to: "/map" | "/alertas" | "/dashboard";
+    to: "/map" | "/alertas" | "/dashboard" | "/leads";
     icon: typeof MapIcon;
     label: string;
     badge?: number;
@@ -125,8 +126,13 @@ function AuthLayout() {
       </main>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
         <NavLink to="/map" icon={MapIcon} label="Mapa" />
+        {role !== "vendedor" && (
+          <NavLink to="/leads" icon={Briefcase} label="Leads" />
+        )}
         <NavLink to="/alertas" icon={Bell} label="Alertas" badge={unread} />
-        <NavLink to="/dashboard" icon={BarChart3} label="Tablero" />
+        {role !== "vendedor" && (
+          <NavLink to="/dashboard" icon={BarChart3} label="Tablero" />
+        )}
       </nav>
     </div>
   );

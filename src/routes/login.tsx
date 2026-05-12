@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { roleHome } from "@/lib/role-home";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +14,17 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, user, loading } = useAuth();
+  const { signIn, user, loading, profile } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/map" });
-  }, [user, loading, navigate]);
+    if (!loading && user && profile) {
+      navigate({ to: roleHome(profile.role) });
+    }
+  }, [user, loading, profile, navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +36,7 @@ function LoginPage() {
       return;
     }
     toast.success("Bienvenido");
-    navigate({ to: "/map" });
+    // navigation happens via the effect once profile loads
   }
 
   return (
