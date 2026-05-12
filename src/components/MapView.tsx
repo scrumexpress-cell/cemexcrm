@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
-import { Factory, Layers, Box, Flame, Clock, X } from "lucide-react";
+import { Factory, Box, Flame, Clock } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
