@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Briefcase, Flame, MapPin } from "lucide-react";
-import { supabase, type Sitio } from "@/integrations/supabase/client";
+import {
+  supabase,
+  type Sitio,
+  type SitioEtapa,
+} from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Select,
@@ -12,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_OPTIONS } from "@/lib/sitio-utils";
+import { ETAPA_LABEL } from "@/components/EtapaStepper";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/leads")({
@@ -22,12 +27,28 @@ interface SitioConProfile extends Sitio {
   profiles?: { nombre: string | null; email: string | null } | null;
 }
 
+const ETAPAS: SitioEtapa[] = [
+  "deteccion",
+  "registro_inicial",
+  "info_completa",
+  "en_seguimiento",
+  "cerrado",
+];
+
+const ETAPA_ACCENT: Record<SitioEtapa, string> = {
+  deteccion: "border-t-slate-400",
+  registro_inicial: "border-t-blue-500",
+  info_completa: "border-t-indigo-500",
+  en_seguimiento: "border-t-amber-500",
+  cerrado: "border-t-emerald-600",
+};
+
 function LeadsPage() {
   const { profile } = useAuth();
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState("all");
-  const [filterPrioridad, setFilterPrioridad] = useState("importantes");
+  const [filterPrioridad, setFilterPrioridad] = useState("todos");
 
   useEffect(() => {
     void load();
@@ -38,7 +59,6 @@ function LeadsPage() {
     const { data, error } = await supabase
       .from("sitios")
       .select("*, profiles:vendedor_id(nombre,email)")
-      .is("estatus_final", null)
       .order("volumen_m3", { ascending: false, nullsFirst: false });
     if (error) toast.error(error.message);
     else setSitios((data as SitioConProfile[]) ?? []);
@@ -55,23 +75,38 @@ function LeadsPage() {
     });
   }, [sitios, filterEstatus, filterPrioridad]);
 
+  const porEtapa = useMemo(() => {
+    const map: Record<SitioEtapa, SitioConProfile[]> = {
+      deteccion: [],
+      registro_inicial: [],
+      info_completa: [],
+      en_seguimiento: [],
+      cerrado: [],
+    };
+    for (const s of filtered) map[s.etapa]?.push(s);
+    return map;
+  }, [filtered]);
+
   const totalM3 = filtered.reduce((a, s) => a + (s.volumen_m3 ?? 0), 0);
 
   return (
-    <div className="flex-1 px-4 py-4 max-w-3xl w-full mx-auto overflow-auto">
+    <div className="flex-1 flex flex-col px-4 py-4 w-full min-h-0">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <Briefcase className="h-5 w-5" /> Gestión de leads
+          <Briefcase className="h-5 w-5" /> Pipeline de oportunidades
         </h1>
+        <div className="text-xs text-muted-foreground">
+          {filtered.length} leads · {totalM3.toLocaleString()} m³
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Priorizados por volumen estimado.{" "}
+      <p className="text-xs text-muted-foreground mb-3">
+        Vista Kanban por etapa.{" "}
         {profile?.role === "gerente" ? "Tu zona." : "Todas las zonas."}
       </p>
 
       <div className="flex gap-2 mb-3 overflow-x-auto">
         <Select value={filterPrioridad} onValueChange={setFilterPrioridad}>
-          <SelectTrigger className="h-9 w-[170px] shrink-0">
+          <SelectTrigger className="h-9 w-[180px] shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -81,7 +116,7 @@ function LeadsPage() {
           </SelectContent>
         </Select>
         <Select value={filterEstatus} onValueChange={setFilterEstatus}>
-          <SelectTrigger className="h-9 w-[160px] shrink-0">
+          <SelectTrigger className="h-9 w-[180px] shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -95,93 +130,103 @@ function LeadsPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="rounded-xl border bg-card p-3">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Leads visibles
-          </div>
-          <div className="text-2xl font-bold tabular-nums mt-1">
-            {filtered.length}
-          </div>
-        </div>
-        <div className="rounded-xl border bg-primary text-primary-foreground p-3">
-          <div className="text-[11px] uppercase tracking-wide opacity-80">
-            m³ en pipeline
-          </div>
-          <div className="text-2xl font-bold tabular-nums mt-1">
-            {totalM3.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-sm text-muted-foreground">
-          Sin leads para los filtros seleccionados.
-        </div>
       ) : (
-        <ul className="space-y-2">
-          {filtered.map((s) => {
-            const v = s.volumen_m3 ?? 0;
-            const critico = v >= 5000;
-            return (
-              <li key={s.id}>
-                <Link
-                  to="/sitios/$sitioId"
-                  params={{ sitioId: s.id }}
-                  className="block bg-card border rounded-xl p-3 hover:bg-muted/40 transition"
+        <div className="flex-1 min-h-0 overflow-x-auto">
+          <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 h-full pb-2">
+            {ETAPAS.map((etapa) => {
+              const items = porEtapa[etapa];
+              const sumaM3 = items.reduce((a, s) => a + (s.volumen_m3 ?? 0), 0);
+              return (
+                <div
+                  key={etapa}
+                  className={`flex flex-col bg-muted/40 rounded-xl border border-t-4 ${ETAPA_ACCENT[etapa]} min-h-0`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="h-10 w-10 rounded-lg flex items-center justify-center text-white shrink-0"
-                      style={{ backgroundColor: ESTATUS_COLOR[s.estatus] }}
-                    >
-                      {critico ? (
-                        <Flame className="h-5 w-5" />
-                      ) : (
-                        <MapPin className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-semibold truncate">
-                          {s.nombre_referencia ?? "Sitio sin nombre"}
-                        </h3>
-                        <span className="font-bold tabular-nums text-sm shrink-0">
-                          {v.toLocaleString()} m³
-                        </span>
+                  <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {ETAPA_LABEL[etapa]}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {s.direccion ??
-                          `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <Badge
-                          style={{
-                            backgroundColor: ESTATUS_COLOR[s.estatus],
-                            color: "white",
-                          }}
-                          className="text-[10px]"
-                        >
-                          {ESTATUS_LABEL[s.estatus]}
-                        </Badge>
-                        {critico && (
-                          <Badge variant="outline" className="text-[10px] border-accent text-accent">
-                            Crítico
-                          </Badge>
-                        )}
-                        <span className="text-[11px] text-muted-foreground self-center ml-auto">
-                          {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
-                        </span>
+                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                        {items.length} · {sumaM3.toLocaleString()} m³
                       </div>
                     </div>
+                    <span className="text-xs font-bold tabular-nums bg-background border rounded-full px-2 py-0.5">
+                      {items.length}
+                    </span>
                   </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+                    {items.length === 0 ? (
+                      <div className="text-[11px] text-muted-foreground text-center py-6">
+                        Sin leads
+                      </div>
+                    ) : (
+                      items.map((s) => {
+                        const v = s.volumen_m3 ?? 0;
+                        const critico = v >= 5000;
+                        return (
+                          <Link
+                            key={s.id}
+                            to="/sitios/$sitioId"
+                            params={{ sitioId: s.id }}
+                            className="block bg-card border rounded-lg p-2.5 hover:shadow-md transition"
+                          >
+                            <div className="flex items-start gap-2">
+                              <div
+                                className="h-8 w-8 rounded-md flex items-center justify-center text-white shrink-0"
+                                style={{ backgroundColor: ESTATUS_COLOR[s.estatus] }}
+                              >
+                                {critico ? (
+                                  <Flame className="h-4 w-4" />
+                                ) : (
+                                  <MapPin className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <h3 className="font-semibold text-sm truncate">
+                                    {s.nombre_referencia ?? "Sitio sin nombre"}
+                                  </h3>
+                                  <span className="font-bold tabular-nums text-xs shrink-0">
+                                    {v.toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  {s.direccion ??
+                                    `${s.lat.toFixed(3)}, ${s.lng.toFixed(3)}`}
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1.5 items-center">
+                                  <Badge
+                                    style={{
+                                      backgroundColor: ESTATUS_COLOR[s.estatus],
+                                      color: "white",
+                                    }}
+                                    className="text-[9px] px-1.5 py-0"
+                                  >
+                                    {ESTATUS_LABEL[s.estatus]}
+                                  </Badge>
+                                  {s.estatus_final && (
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                                      {s.estatus_final}
+                                    </Badge>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground ml-auto truncate max-w-[100px]">
+                                    {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
