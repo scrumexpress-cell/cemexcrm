@@ -121,7 +121,6 @@ function distributedCloseAt(createdAt: Date, idx = 0): Date {
   );
   const monthsBack = Math.min(idx % 6, minMonths);
   const d = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
-  d.setMonth(d.getMonth() - monthsBack);
   const maxDay = monthsBack === 0 ? Math.max(1, now.getDate()) : 27;
   d.setDate(1 + (idx * 3) % maxDay);
   return d;
@@ -332,7 +331,8 @@ async function seedAlertasInactividad(user: User, rows: InsertedRow[]) {
 }
 
 export async function seedSampleSitios({ user, zonaId }: SeedInput) {
-  const rows = await insertSitios(user, zonaId);
+  const capabilities = await detectSitiosCapabilities();
+  const rows = await insertSitios(user, zonaId, capabilities);
   await seedInteracciones(user, rows);
   await seedObras(user, rows);
   await seedAlertasInactividad(user, rows);
@@ -365,7 +365,8 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
     await supabase.from("obras").delete().in("id", obraIds);
   }
 
-  const rows = await insertSitios(user, zonaId);
+  const capabilities = await detectSitiosCapabilities();
+  const rows = await insertSitios(user, zonaId, capabilities);
   const interacciones = await seedInteracciones(user, rows);
   const obras = await seedObras(user, rows);
   const alertas = await seedAlertasInactividad(user, rows);
