@@ -98,27 +98,37 @@ export function MapView({
     if (!size.width || !size.height || !token) return [];
     const halfW = size.width / 2;
     const halfH = size.height / 2;
-    const startX = Math.floor((centerWorld.x - halfW) / TILE_SIZE);
-    const endX = Math.floor((centerWorld.x + halfW) / TILE_SIZE);
-    const startY = Math.floor((centerWorld.y - halfH) / TILE_SIZE);
-    const endY = Math.floor((centerWorld.y + halfH) / TILE_SIZE);
-    const maxTile = 2 ** viewZoom;
-    const result: Array<{ key: string; url: string; left: number; top: number }> = [];
+    const tileZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(viewZoom)));
+    const scale = 2 ** (viewZoom - tileZoom);
+    // Compute tile-world coords for current view center at tileZoom
+    const tileCenterWorld = lngLatToWorld(viewCenter[0], viewCenter[1], tileZoom);
+    // Visible world extent in tile-zoom pixels
+    const visHalfW = halfW / scale;
+    const visHalfH = halfH / scale;
+    const startX = Math.floor((tileCenterWorld.x - visHalfW) / TILE_SIZE);
+    const endX = Math.floor((tileCenterWorld.x + visHalfW) / TILE_SIZE);
+    const startY = Math.floor((tileCenterWorld.y - visHalfH) / TILE_SIZE);
+    const endY = Math.floor((tileCenterWorld.y + visHalfH) / TILE_SIZE);
+    const maxTile = 2 ** tileZoom;
+    const result: Array<{ key: string; url: string; left: number; top: number; scale: number }> = [];
 
     for (let x = startX; x <= endX; x += 1) {
       for (let y = startY; y <= endY; y += 1) {
         if (y < 0 || y >= maxTile) continue;
         const wrappedX = ((x % maxTile) + maxTile) % maxTile;
+        const tileLeftWorld = x * TILE_SIZE - tileCenterWorld.x;
+        const tileTopWorld = y * TILE_SIZE - tileCenterWorld.y;
         result.push({
-          key: `${viewZoom}-${x}-${y}`,
-          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/${TILE_SIZE}/${viewZoom}/${wrappedX}/${y}@2x?access_token=${token}`,
-          left: x * TILE_SIZE - centerWorld.x + halfW,
-          top: y * TILE_SIZE - centerWorld.y + halfH,
+          key: `${tileZoom}-${x}-${y}`,
+          url: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/${TILE_SIZE}/${tileZoom}/${wrappedX}/${y}@2x?access_token=${token}`,
+          left: tileLeftWorld * scale + halfW,
+          top: tileTopWorld * scale + halfH,
+          scale,
         });
       }
     }
     return result;
-  }, [centerWorld.x, centerWorld.y, size.height, size.width, token, viewZoom]);
+  }, [size.height, size.width, token, viewZoom, viewCenter]);
 
   function pointToLngLat(clientX: number, clientY: number) {
     const rect = containerRef.current?.getBoundingClientRect();
