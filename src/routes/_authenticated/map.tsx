@@ -233,13 +233,26 @@ function MapPage() {
               Toca el mapa o arrastra el pin azul para fijar el punto.
             </div>
             {nearbyExisting && (
-              <div className="text-xs text-destructive font-medium">
-                ⚠ Ya hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
-                {nearbyExisting.sitio.vendedor_id === user?.id
-                  ? "ti"
-                  : (nearbyExisting.sitio.vendedor?.nombre ??
-                    nearbyExisting.sitio.vendedor?.email ??
-                    "otro vendedor")}
+              <div className="text-xs text-amber-700 dark:text-amber-400 font-medium space-y-1 pt-1">
+                <div>
+                  ⚠ Hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
+                  {nearbyExisting.sitio.vendedor_id === user?.id
+                    ? "ti"
+                    : (nearbyExisting.sitio.vendedor?.nombre ??
+                      nearbyExisting.sitio.vendedor?.email ??
+                      "otro vendedor")}
+                  . Verifica que no sea el mismo lead.
+                </div>
+                <button
+                  type="button"
+                  className="underline font-semibold"
+                  onClick={() => {
+                    setSelected(nearbyExisting.sitio);
+                    cancelPlacing();
+                  }}
+                >
+                  Ver sitio existente
+                </button>
               </div>
             )}
           </div>
