@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, MapIcon, Bell, BarChart3, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resetAndSeedAll } from "@/lib/seed-sitios";
 import cemexLogo from "@/assets/cemex-logo.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -30,6 +31,25 @@ function AuthLayout() {
 
   useEffect(() => {
     if (!user) return;
+    // Auto-siembra de datos demo (una sola vez por usuario)
+    void (async () => {
+      const flagKey = `cemex-demo-seeded-v3-${user.id}`;
+      if (typeof window === "undefined") return;
+      if (window.localStorage.getItem(flagKey)) return;
+      try {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("zona_id")
+          .eq("id", user.id)
+          .maybeSingle();
+        await resetAndSeedAll(user, (prof?.zona_id as string | null) ?? null);
+        window.localStorage.setItem(flagKey, "1");
+        // refresca la vista actual para mostrar los datos sembrados
+        router.invalidate();
+      } catch (e) {
+        console.warn("auto-seed:", (e as Error).message);
+      }
+    })();
     void refreshUnread();
     const ch = supabase
       .channel("alertas-rt")
