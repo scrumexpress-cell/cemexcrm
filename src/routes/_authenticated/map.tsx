@@ -219,7 +219,13 @@ function MapPage() {
             void navigate({ to: "/sitios/$sitioId", params: { sitioId: s.id } });
           }}
           onMapClick={(lng, lat) => {
-            if (placing) setPlaceCoords({ lng, lat });
+            if (placing) {
+              setPlaceCoords({ lng, lat });
+            } else {
+              setSelected(null);
+              setPlaceCoords({ lng, lat });
+              setPlacing(true);
+            }
           }}
           draggableMarker={placing && placeCoords ? placeCoords : undefined}
           onMarkerDrag={(lng, lat) => setPlaceCoords({ lng, lat })}
