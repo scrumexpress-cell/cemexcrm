@@ -353,10 +353,11 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
     .from("sitios")
     .select(selectColumns)
     .eq("vendedor_id", user.id);
-  const ids = (existing ?? []).map((s) => s.id);
+  const existingRows = (existing ?? []) as unknown as Array<{ id: string; obra_id?: string | null }>;
+  const ids = existingRows.map((s) => s.id);
   const obraIds = Array.from(
     new Set(
-      ((existing ?? []) as Array<{ obra_id?: string | null }>)
+      existingRows
         .map((s) => s.obra_id)
         .filter((x): x is string => !!x),
     ),
