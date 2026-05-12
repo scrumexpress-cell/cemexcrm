@@ -304,9 +304,6 @@ function DashboardPage() {
               <SelectItem value="12">Últimos 12 m</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={handleEnrich} disabled={enriching || loading}>
-            <Sparkles className="h-4 w-4 mr-1" /> {enriching ? "Generando..." : "Datos demo"}
-          </Button>
           <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading}>
             <Download className="h-4 w-4 mr-1" /> CSV
           </Button>
