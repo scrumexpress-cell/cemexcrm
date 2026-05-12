@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR } from "@/lib/sitio-utils";
 import type { Sitio } from "@/integrations/supabase/client";
@@ -58,8 +59,12 @@ export function MapView({
     if (onMapClick) {
       map.on("click", (e) => onMapClick(e.lngLat.lng, e.lngLat.lat));
     }
+    map.once("load", () => map.resize());
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
     mapRef.current = map;
     return () => {
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -111,7 +116,7 @@ export function MapView({
   if (tokenMissing) {
     return <MapboxTokenPrompt onSaved={() => setTokenMissing(false)} />;
   }
-  return <div ref={containerRef} className={className ?? "w-full h-full"} />;
+  return <div ref={containerRef} className={className ?? "h-full min-h-[320px] w-full"} />;
 }
 
 function MapboxTokenPrompt({ onSaved }: { onSaved: () => void }) {
