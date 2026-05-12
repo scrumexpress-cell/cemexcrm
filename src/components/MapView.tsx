@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMapboxToken } from "@/lib/mapbox-token";
-import { ESTATUS_COLOR, ESTATUS_LABEL } from "@/lib/sitio-utils";
+import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
@@ -186,24 +186,31 @@ export function MapView({
             className="absolute"
             style={{ left: position.left, top: position.top }}
           >
-            <button
-              type="button"
-              aria-label={sitio.nombre_referencia ?? "Sitio"}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md transition-transform ${
-                isMine
-                  ? "h-[20px] w-[20px] border-[3px] border-accent ring-2 ring-accent/40"
-                  : "h-[18px] w-[18px] border-2 border-card opacity-90"
-              } ${isHovered ? "scale-125 z-10" : ""}`}
-              style={{
-                backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
-              }}
-              onPointerDown={(event) => event.stopPropagation()}
-              onPointerEnter={() => setHoveredId(sitio.id)}
-              onPointerLeave={() =>
-                setHoveredId((id) => (id === sitio.id ? null : id))
-              }
-              onClick={() => onPinClick?.(sitio)}
-            />
+            {(() => {
+              const Icon = ESTATUS_ICON[sitio.estatus];
+              return (
+                <button
+                  type="button"
+                  aria-label={sitio.nombre_referencia ?? "Sitio"}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full shadow-md transition-transform flex items-center justify-center text-white ${
+                    isMine
+                      ? "h-7 w-7 border-[3px] border-accent ring-2 ring-accent/40"
+                      : "h-6 w-6 border-2 border-card opacity-95"
+                  } ${isHovered ? "scale-125 z-10" : ""}`}
+                  style={{
+                    backgroundColor: ESTATUS_COLOR[sitio.estatus] ?? "#888",
+                  }}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onPointerEnter={() => setHoveredId(sitio.id)}
+                  onPointerLeave={() =>
+                    setHoveredId((id) => (id === sitio.id ? null : id))
+                  }
+                  onClick={() => onPinClick?.(sitio)}
+                >
+                  <Icon className={isMine ? "h-3.5 w-3.5" : "h-3 w-3"} strokeWidth={2.5} />
+                </button>
+              );
+            })()}
             {isHovered && (
               <div
                 className="absolute z-20 -translate-x-1/2 pointer-events-none"
