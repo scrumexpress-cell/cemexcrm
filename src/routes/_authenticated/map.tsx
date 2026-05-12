@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, X, Check, Crosshair, Sparkles } from "lucide-react";
 import { MapView } from "@/components/MapView";
@@ -44,6 +44,7 @@ export const Route = createFileRoute("/_authenticated/map")({
 
 function MapPage() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [sitios, setSitios] = useState<SitioConVendedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
@@ -215,8 +216,7 @@ function MapPage() {
           currentUserId={user?.id ?? null}
           onPinClick={(s) => {
             if (placing) return;
-            const found = sitios.find((x) => x.id === s.id) ?? null;
-            setSelected(found);
+            void navigate({ to: "/sitios/$sitioId", params: { sitioId: s.id } });
           }}
           onMapClick={(lng, lat) => {
             if (placing) setPlaceCoords({ lng, lat });
