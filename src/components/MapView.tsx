@@ -114,7 +114,14 @@ export function MapView({
     const startY = Math.floor((centerWorld.y - size.height / 2) / TILE_SIZE);
     const endY = Math.floor((centerWorld.y + size.height / 2) / TILE_SIZE);
     const max = 2 ** z;
-    const out: Array<{ key: string; x: number; y: number; left: number; top: number; url: string }> = [];
+    const out: Array<{
+      key: string;
+      x: number;
+      y: number;
+      left: number;
+      top: number;
+      url: string;
+    }> = [];
 
     for (let x = startX; x <= endX; x++) {
       for (let y = startY; y <= endY; y++) {
@@ -134,7 +141,12 @@ export function MapView({
   }, [centerWorld.x, centerWorld.y, size.height, size.width, styleKey, token, z]);
 
   const allMarkers = useMemo(() => {
-    const siteMarkers = sitios.map((s) => ({ type: "sitio" as const, data: s, lng: s.lng, lat: s.lat }));
+    const siteMarkers = sitios.map((s) => ({
+      type: "sitio" as const,
+      data: s,
+      lng: s.lng,
+      lat: s.lat,
+    }));
     const plantMarkers = showPlants
       ? PLANTAS_CEMEX.map((p) => ({ type: "planta" as const, data: p, lng: p.lng, lat: p.lat }))
       : [];
@@ -161,7 +173,11 @@ export function MapView({
         x: beforeCenter.x + (clientX - rect.left - rect.width / 2),
         y: beforeCenter.y + (clientY - rect.top - rect.height / 2),
       };
-      const focusLngLat = worldToLngLat(focusWorldBefore.x, focusWorldBefore.y, Math.round(prev.zoom));
+      const focusLngLat = worldToLngLat(
+        focusWorldBefore.x,
+        focusWorldBefore.y,
+        Math.round(prev.zoom),
+      );
       const focusWorldAfter = lngLatToWorld(focusLngLat.lng, focusLngLat.lat, next);
       const nextCenterWorld = {
         x: focusWorldAfter.x - (clientX - rect.left - rect.width / 2),
@@ -179,7 +195,10 @@ export function MapView({
   return (
     <div
       ref={containerRef}
-      className={["relative h-full min-h-[320px] w-full overflow-hidden bg-muted select-none", className]
+      className={[
+        "relative h-full min-h-[320px] w-full overflow-hidden bg-muted select-none",
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
       style={{ touchAction: "none" }}
@@ -221,7 +240,10 @@ export function MapView({
       onTouchStart={(e) => {
         if (e.touches.length === 2) {
           const [a, b] = Array.from(e.touches);
-          pinchRef.current = { distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), zoom: view.zoom };
+          pinchRef.current = {
+            distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+            zoom: view.zoom,
+          };
         }
       }}
       onTouchMove={(e) => {
@@ -230,7 +252,11 @@ export function MapView({
         const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
         if (!pinchRef.current.distance) return;
         const delta = Math.log2(distance / pinchRef.current.distance);
-        zoomAt(Math.round(pinchRef.current.zoom + delta), (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+        zoomAt(
+          Math.round(pinchRef.current.zoom + delta),
+          (a.clientX + b.clientX) / 2,
+          (a.clientY + b.clientY) / 2,
+        );
       }}
       onTouchEnd={() => {
         pinchRef.current = null;
@@ -249,7 +275,10 @@ export function MapView({
         ))}
       </div>
 
-      {showHeat && sitios.map((s) => <HeatSpot key={`heat-${s.id}`} sitio={s} view={view} size={size} zoom={z} />)}
+      {showHeat &&
+        sitios.map((s) => (
+          <HeatSpot key={`heat-${s.id}`} sitio={s} view={view} size={size} zoom={z} />
+        ))}
 
       {allMarkers.map((m) => {
         const pos = markerPosition(m.lng, m.lat, centerWorld, size, z);
@@ -288,7 +317,9 @@ export function MapView({
               height: isMine ? 30 : 26,
               transform: "translate(-50%, -50%)",
               backgroundColor: ESTATUS_COLOR[sitio.estatus],
-              outline: isMine ? "2px solid color-mix(in oklab, var(--accent) 70%, transparent)" : undefined,
+              outline: isMine
+                ? "2px solid color-mix(in oklab, var(--accent) 70%, transparent)"
+                : undefined,
               outlineOffset: 2,
             }}
             onClick={(e) => {
@@ -296,7 +327,11 @@ export function MapView({
               onPinClick?.(sitio);
             }}
           >
-            <span dangerouslySetInnerHTML={{ __html: renderToStaticMarkup(<Icon color="white" size={14} strokeWidth={2.5} />) }} />
+            <span
+              dangerouslySetInnerHTML={{
+                __html: renderToStaticMarkup(<Icon color="white" size={14} strokeWidth={2.5} />),
+              }}
+            />
           </button>
         );
       })}
@@ -328,25 +363,56 @@ export function MapView({
               type="button"
               onClick={() => setStyleKey(k)}
               className={`rounded px-2 py-1 text-xs font-medium transition ${
-                styleKey === k ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+                styleKey === k
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-muted"
               }`}
             >
-              {k === "streets" ? "Calles" : k === "satellite" ? "Satélite" : k === "outdoors" ? "Relieve" : "Oscuro"}
+              {k === "streets"
+                ? "Calles"
+                : k === "satellite"
+                  ? "Satélite"
+                  : k === "outdoors"
+                    ? "Relieve"
+                    : "Oscuro"}
             </button>
           ))}
         </div>
         <div className="flex rounded-lg border bg-card p-1 shadow-lg">
-          <ToggleBtn active={showPlants} onClick={() => setShowPlants((v) => !v)} icon={<Factory className="h-3.5 w-3.5" />} label="Plantas" />
-          <ToggleBtn active={showHeat} onClick={() => setShowHeat((v) => !v)} icon={<Flame className="h-3.5 w-3.5" />} label="Calor" />
+          <ToggleBtn
+            active={showPlants}
+            onClick={() => setShowPlants((v) => !v)}
+            icon={<Factory className="h-3.5 w-3.5" />}
+            label="Plantas"
+          />
+          <ToggleBtn
+            active={showHeat}
+            onClick={() => setShowHeat((v) => !v)}
+            icon={<Flame className="h-3.5 w-3.5" />}
+            label="Calor"
+          />
         </div>
       </div>
 
-      <div data-map-control className="absolute right-3 top-3 z-30 overflow-hidden rounded-lg border bg-card shadow-lg">
-        <button type="button" className="flex h-9 w-9 items-center justify-center hover:bg-muted" onClick={() => zoomAt(view.zoom + 1)} aria-label="Acercar">
+      <div
+        data-map-control
+        className="absolute right-3 top-3 z-30 overflow-hidden rounded-lg border bg-card shadow-lg"
+      >
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
+          onClick={() => zoomAt(view.zoom + 1)}
+          aria-label="Acercar"
+        >
           +
         </button>
         <div className="h-px bg-border" />
-        <button type="button" className="flex h-9 w-9 items-center justify-center hover:bg-muted" onClick={() => zoomAt(view.zoom - 1)} aria-label="Alejar">
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
+          onClick={() => zoomAt(view.zoom - 1)}
+          aria-label="Alejar"
+        >
           −
         </button>
       </div>
@@ -363,13 +429,32 @@ export function MapView({
   );
 }
 
-function markerPosition(lng: number, lat: number, centerWorld: { x: number; y: number }, size: { width: number; height: number }, zoom: number) {
+function markerPosition(
+  lng: number,
+  lat: number,
+  centerWorld: { x: number; y: number },
+  size: { width: number; height: number },
+  zoom: number,
+) {
   if (!size.width || !size.height) return null;
   const world = lngLatToWorld(lng, lat, zoom);
-  return { x: world.x - centerWorld.x + size.width / 2, y: world.y - centerWorld.y + size.height / 2 };
+  return {
+    x: world.x - centerWorld.x + size.width / 2,
+    y: world.y - centerWorld.y + size.height / 2,
+  };
 }
 
-function HeatSpot({ sitio, view, size, zoom }: { sitio: MapSitio; view: { lng: number; lat: number }; size: { width: number; height: number }; zoom: number }) {
+function HeatSpot({
+  sitio,
+  view,
+  size,
+  zoom,
+}: {
+  sitio: MapSitio;
+  view: { lng: number; lat: number };
+  size: { width: number; height: number };
+  zoom: number;
+}) {
   const centerWorld = lngLatToWorld(view.lng, view.lat, zoom);
   const pos = markerPosition(sitio.lng, sitio.lat, centerWorld, size, zoom);
   if (!pos) return null;
@@ -422,7 +507,9 @@ function DraggablePoint({
       }}
       onPointerMove={(e) => {
         if (e.buttons !== 1 && e.pointerType !== "touch") return;
-        const parent = (e.currentTarget.parentElement as HTMLElement | null)?.getBoundingClientRect();
+        const parent = (
+          e.currentTarget.parentElement as HTMLElement | null
+        )?.getBoundingClientRect();
         if (!parent) return;
         const worldX = centerWorld.x + (e.clientX - parent.left - parent.width / 2);
         const worldY = centerWorld.y + (e.clientY - parent.top - parent.height / 2);
@@ -468,7 +555,9 @@ function MapboxTokenPrompt() {
       <div className="max-w-sm rounded-lg border bg-card p-4 text-center shadow-sm">
         <Mountain className="mx-auto mb-2 h-8 w-8 text-primary" />
         <h2 className="font-semibold">Mapa no disponible</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Falta configurar el token público de Mapbox.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Falta configurar el token público de Mapbox.
+        </p>
       </div>
     </div>
   );
