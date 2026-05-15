@@ -117,7 +117,7 @@ function MapPage() {
   }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
 
   // Sitios existentes dentro de un radio (anti-duplicados)
-  const PROXIMITY_RADIUS_M = 100;
+  const PROXIMITY_RADIUS_M = 20;
   const nearbyMatches = useMemo(() => {
     if (!placeCoords) return [];
     return sitios
