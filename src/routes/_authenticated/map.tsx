@@ -15,6 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase, type Sitio } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertTriangle, MapPin } from "lucide-react";
 
 type SitioConVendedor = Sitio & {
   vendedor: { nombre: string | null; email: string | null } | null;
@@ -54,6 +63,7 @@ function MapPage() {
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dupDialogOpen, setDupDialogOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
   async function handleSeed() {
@@ -106,16 +116,16 @@ function MapPage() {
     });
   }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
 
-  // Nearby existing sitio (within 80 m) while placing — to prevent duplicates
-  const nearbyExisting = useMemo(() => {
-    if (!placeCoords) return null;
-    let best: { sitio: SitioConVendedor; d: number } | null = null;
-    for (const s of sitios) {
-      const d = distMeters(placeCoords, { lat: s.lat, lng: s.lng });
-      if (d <= 80 && (!best || d < best.d)) best = { sitio: s, d };
-    }
-    return best;
+  // Sitios existentes dentro de un radio (anti-duplicados)
+  const PROXIMITY_RADIUS_M = 100;
+  const nearbyMatches = useMemo(() => {
+    if (!placeCoords) return [];
+    return sitios
+      .map((s) => ({ sitio: s, d: distMeters(placeCoords, { lat: s.lat, lng: s.lng }) }))
+      .filter((x) => x.d <= PROXIMITY_RADIUS_M)
+      .sort((a, b) => a.d - b.d);
   }, [placeCoords, sitios]);
+  const nearbyExisting = nearbyMatches[0] ?? null;
 
   function startPlacing() {
     setSelected(null);
@@ -150,6 +160,10 @@ function MapPage() {
   function confirmPlacing() {
     if (!placeCoords) {
       toast.error("Toca el mapa para fijar la ubicación");
+      return;
+    }
+    if (nearbyMatches.length > 0) {
+      setDupDialogOpen(true);
       return;
     }
     setDialogOpen(true);
@@ -386,6 +400,89 @@ function MapPage() {
           void load();
         }}
       />
+
+      <Dialog open={dupDialogOpen} onOpenChange={setDupDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Posible duplicado
+            </DialogTitle>
+            <DialogDescription>
+              Encontramos {nearbyMatches.length}{" "}
+              {nearbyMatches.length === 1 ? "oportunidad" : "oportunidades"} a menos
+              de {PROXIMITY_RADIUS_M} m. Verifica que no sea el mismo lead antes de
+              registrar uno nuevo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {nearbyMatches.map(({ sitio, d }) => {
+              const mine = sitio.vendedor_id === user?.id;
+              return (
+                <button
+                  key={sitio.id}
+                  type="button"
+                  onClick={() => {
+                    setDupDialogOpen(false);
+                    cancelPlacing();
+                    void navigate({
+                      to: "/sitios/$sitioId",
+                      params: { sitioId: sitio.id },
+                    });
+                  }}
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="font-medium text-sm truncate">
+                      {sitio.nombre_referencia ?? "Sitio sin nombre"}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-[10px]"
+                      style={{ borderColor: ESTATUS_COLOR[sitio.estatus] }}
+                    >
+                      {ESTATUS_LABEL[sitio.estatus]}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    <span>{Math.round(d)} m</span>
+                    <span>·</span>
+                    <span className="truncate">
+                      {mine
+                        ? "Tú"
+                        : (sitio.vendedor?.nombre ??
+                          sitio.vendedor?.email ??
+                          "Otro vendedor")}
+                    </span>
+                    {sitio.volumen_m3 != null && (
+                      <>
+                        <span>·</span>
+                        <span>{sitio.volumen_m3} m³</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDupDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setDupDialogOpen(false);
+                setDialogOpen(true);
+              }}
+            >
+              Crear de todos modos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
