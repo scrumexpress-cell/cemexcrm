@@ -192,10 +192,14 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
           </div>
 
           <div className="space-y-1.5">
-            <Label>Dirección (opcional)</Label>
+            <Label className="flex items-center gap-2">
+              Dirección
+              {loadingAddr && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </Label>
             <Input
               value={direccion}
               onChange={(e) => setDireccion(e.target.value)}
+              placeholder={loadingAddr ? "Obteniendo dirección..." : ""}
               className="h-10"
             />
           </div>
