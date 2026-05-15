@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import mapboxgl, { type Map as MapboxMap, type Marker, type Popup } from "mapbox-gl";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
-import { Factory, Box, Flame, Clock } from "lucide-react";
+import { Factory, Flame, Map as MapIcon, Mountain, Navigation } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
@@ -24,13 +23,39 @@ interface Props {
 }
 
 const GDL: [number, number] = [-103.3496, 20.6597];
+const TILE_SIZE = 512;
+const MIN_ZOOM = 3;
+const MAX_ZOOM = 18;
 
-type StyleKey = "streets" | "satellite" | "dark";
-const STYLES: Record<StyleKey, string> = {
-  streets: "mapbox://styles/mapbox/streets-v12",
-  satellite: "mapbox://styles/mapbox/satellite-streets-v12",
-  dark: "mapbox://styles/mapbox/dark-v11",
+type StyleKey = "streets" | "satellite" | "outdoors" | "dark";
+
+const STYLE_IDS: Record<StyleKey, string> = {
+  streets: "mapbox/streets-v12",
+  satellite: "mapbox/satellite-streets-v12",
+  outdoors: "mapbox/outdoors-v12",
+  dark: "mapbox/dark-v11",
 };
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function lngLatToWorld(lng: number, lat: number, z: number) {
+  const scale = TILE_SIZE * 2 ** z;
+  const x = ((lng + 180) / 360) * scale;
+  const safeLat = clamp(lat, -85.05112878, 85.05112878);
+  const sin = Math.sin((safeLat * Math.PI) / 180);
+  const y = (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale;
+  return { x, y };
+}
+
+function worldToLngLat(x: number, y: number, z: number) {
+  const scale = TILE_SIZE * 2 ** z;
+  const lng = (x / scale) * 360 - 180;
+  const n = Math.PI - (2 * Math.PI * y) / scale;
+  const lat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  return { lng, lat };
+}
 
 export function MapView({
   sitios,
@@ -43,486 +68,459 @@ export function MapView({
   onMarkerDrag,
   currentUserId,
 }: Props) {
+  const token = getMapboxToken();
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapboxMap | null>(null);
-  const markersRef = useRef<Marker[]>([]);
-  const plantMarkersRef = useRef<Marker[]>([]);
-  const draggableMarkerRef = useRef<Marker | null>(null);
-  const popupRef = useRef<Popup | null>(null);
-  const onMapClickRef = useRef(onMapClick);
-  const onPinClickRef = useRef(onPinClick);
-  const onMarkerDragRef = useRef(onMarkerDrag);
+  const draggingRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    centerX: number;
+    centerY: number;
+    moved: boolean;
+  } | null>(null);
+  const dragMarkerRef = useRef(false);
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
 
-  const [token, setToken] = useState<string | null>(null);
-  const [tokenMissing, setTokenMissing] = useState(false);
   const [styleKey, setStyleKey] = useState<StyleKey>("streets");
-  const [is3D, setIs3D] = useState(false);
-  const [showHeatmap, setShowHeatmap] = useState(false);
-  const [showIsochrones, setShowIsochrones] = useState(false);
-  const [styleLoaded, setStyleLoaded] = useState(0);
-
-  // Keep callback refs up to date without re-creating map
-  useEffect(() => {
-    onMapClickRef.current = onMapClick;
-    onPinClickRef.current = onPinClick;
-    onMarkerDragRef.current = onMarkerDrag;
-  });
+  const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [showHeat, setShowHeat] = useState(false);
+  const [showPlants, setShowPlants] = useState(true);
 
   useEffect(() => {
-    const saved = getMapboxToken();
-    setToken(saved);
-    setTokenMissing(!saved);
+    if (!containerRef.current) return;
+    const update = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) setSize({ width: rect.width, height: rect.height });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
-  // Initialize map once
   useEffect(() => {
-    if (!token || !containerRef.current || mapRef.current) return;
-    mapboxgl.accessToken = token;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: STYLES[styleKey],
-      center,
-      zoom,
-      attributionControl: false,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
-    map.touchZoomRotate.enable();
-    map.touchPitch.enable();
+    if (!draggableMarker) return;
+    setView((v) => ({ ...v, lng: draggableMarker.lng, lat: draggableMarker.lat }));
+  }, [draggableMarker]);
 
-    map.on("style.load", () => {
-      setStyleLoaded((v) => v + 1);
-    });
+  const z = Math.round(clamp(view.zoom, MIN_ZOOM, MAX_ZOOM));
+  const centerWorld = lngLatToWorld(view.lng, view.lat, z);
 
-    // Silenciar advertencias de íconos faltantes en el sprite del estilo
-    map.on("styleimagemissing", (e) => {
-      const id = (e as unknown as { id: string }).id;
-      if (!map.hasImage(id)) {
-        const empty = { width: 1, height: 1, data: new Uint8Array(4) };
-        try {
-          map.addImage(id, empty as unknown as ImageData);
-        } catch {
-          /* noop */
-        }
-      }
-    });
+  const tiles = useMemo(() => {
+    if (!size.width || !size.height || !token) return [];
+    const startX = Math.floor((centerWorld.x - size.width / 2) / TILE_SIZE);
+    const endX = Math.floor((centerWorld.x + size.width / 2) / TILE_SIZE);
+    const startY = Math.floor((centerWorld.y - size.height / 2) / TILE_SIZE);
+    const endY = Math.floor((centerWorld.y + size.height / 2) / TILE_SIZE);
+    const max = 2 ** z;
+    const out: Array<{
+      key: string;
+      x: number;
+      y: number;
+      left: number;
+      top: number;
+      url: string;
+    }> = [];
 
-    // Forzar resize después de montar (el contenedor flex puede tener 0px al inicio)
-    const ro = new ResizeObserver(() => {
-      map.resize();
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
-    setTimeout(() => map.resize(), 0);
-    setTimeout(() => map.resize(), 200);
-
-    map.on("click", (e) => {
-      // Ignore clicks on markers (handled separately)
-      const target = e.originalEvent.target as HTMLElement | null;
-      if (target?.closest(".mapboxgl-marker")) return;
-      onMapClickRef.current?.(e.lngLat.lng, e.lngLat.lat);
-    });
-
-    mapRef.current = map;
-    return () => {
-      ro.disconnect();
-      map.remove();
-      mapRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  // Style change
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    map.setStyle(STYLES[styleKey]);
-  }, [styleKey]);
-
-  // Apply 3D terrain + buildings on style load
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !styleLoaded) return;
-
-    if (is3D) {
-      if (!map.getSource("mapbox-dem")) {
-        map.addSource("mapbox-dem", {
-          type: "raster-dem",
-          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-          tileSize: 512,
-          maxzoom: 14,
+    for (let x = startX; x <= endX; x++) {
+      for (let y = startY; y <= endY; y++) {
+        if (y < 0 || y >= max) continue;
+        const wrappedX = ((x % max) + max) % max;
+        out.push({
+          key: `${z}-${x}-${y}`,
+          x: wrappedX,
+          y,
+          left: x * TILE_SIZE - centerWorld.x + size.width / 2,
+          top: y * TILE_SIZE - centerWorld.y + size.height / 2,
+          url: `https://api.mapbox.com/styles/v1/${STYLE_IDS[styleKey]}/tiles/512/${z}/${wrappedX}/${y}@2x?access_token=${token}`,
         });
       }
-      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
-      map.easeTo({ pitch: 60, bearing: -20, duration: 800 });
-
-      // 3D buildings layer (only on streets/dark styles)
-      if (styleKey !== "satellite" && !map.getLayer("3d-buildings")) {
-        const layers = map.getStyle().layers;
-        const labelLayer = layers?.find(
-          (l) => l.type === "symbol" && (l.layout as Record<string, unknown> | undefined)?.["text-field"],
-        );
-        try {
-          map.addLayer(
-            {
-              id: "3d-buildings",
-              source: "composite",
-              "source-layer": "building",
-              filter: ["==", "extrude", "true"],
-              type: "fill-extrusion",
-              minzoom: 14,
-              paint: {
-                "fill-extrusion-color": "#aaa",
-                "fill-extrusion-height": [
-                  "interpolate", ["linear"], ["zoom"],
-                  14, 0, 15.05, ["get", "height"],
-                ],
-                "fill-extrusion-base": [
-                  "interpolate", ["linear"], ["zoom"],
-                  14, 0, 15.05, ["get", "min_height"],
-                ],
-                "fill-extrusion-opacity": 0.7,
-              },
-            },
-            labelLayer?.id,
-          );
-        } catch {
-          // some styles don't expose composite source
-        }
-      }
-    } else {
-      map.setTerrain(null);
-      map.easeTo({ pitch: 0, bearing: 0, duration: 600 });
-      if (map.getLayer("3d-buildings")) map.removeLayer("3d-buildings");
     }
-  }, [is3D, styleLoaded, styleKey]);
+    return out;
+  }, [centerWorld.x, centerWorld.y, size.height, size.width, styleKey, token, z]);
 
-  // Render sitio markers
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    // Clear previous
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    sitios.forEach((s) => {
-      const isMine = currentUserId != null && s.vendedor_id === currentUserId;
-      const color = ESTATUS_COLOR[s.estatus] ?? "#888";
-      const Icon = ESTATUS_ICON[s.estatus];
-      const iconHtml = renderToStaticMarkup(
-        <Icon
-          color="white"
-          size={isMine ? 14 : 12}
-          strokeWidth={2.5}
-        />,
-      );
-
-      const el = document.createElement("button");
-      el.type = "button";
-      el.setAttribute("aria-label", s.nombre_referencia ?? "Sitio");
-      el.style.cssText = `
-        width:${isMine ? 28 : 24}px;
-        height:${isMine ? 28 : 24}px;
-        border-radius:9999px;
-        background:${color};
-        border:${isMine ? "3px solid hsl(var(--accent, 38 92% 50%))" : "2px solid white"};
-        box-shadow:0 2px 6px rgba(0,0,0,0.3);
-        display:flex;align-items:center;justify-content:center;
-        cursor:pointer;padding:0;
-        ${isMine ? "outline: 2px solid rgba(245,158,11,0.4); outline-offset: 1px;" : ""}
-      `;
-      el.innerHTML = iconHtml;
-      el.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        onPinClickRef.current?.(s);
-      });
-
-      // Hover popup
-      el.addEventListener("mouseenter", () => {
-        if (popupRef.current) popupRef.current.remove();
-        const popup = new mapboxgl.Popup({
-          closeButton: false,
-          closeOnClick: false,
-          offset: 16,
-          className: "cemex-popup",
-        })
-          .setLngLat([s.lng, s.lat])
-          .setHTML(buildPopupHTML(s, isMine))
-          .addTo(map);
-        popupRef.current = popup;
-      });
-      el.addEventListener("mouseleave", () => {
-        if (popupRef.current) {
-          popupRef.current.remove();
-          popupRef.current = null;
-        }
-      });
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([s.lng, s.lat])
-        .addTo(map);
-      markersRef.current.push(marker);
-    });
-  }, [sitios, currentUserId, styleLoaded]);
-
-  // Plant markers (always visible)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    plantMarkersRef.current.forEach((m) => m.remove());
-    plantMarkersRef.current = [];
-
-    PLANTAS_CEMEX.forEach((p) => {
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:32px;height:32px;border-radius:8px;
-        background:#1F2A93;border:2px solid white;
-        box-shadow:0 3px 8px rgba(0,0,0,0.4);
-        display:flex;align-items:center;justify-content:center;
-        cursor:pointer;
-      `;
-      el.innerHTML = renderToStaticMarkup(
-        <Factory color="white" size={18} strokeWidth={2.5} />,
-      );
-      el.title = p.nombre;
-      el.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        new mapboxgl.Popup({ offset: 18 })
-          .setLngLat([p.lng, p.lat])
-          .setHTML(
-            `<div style="padding:4px 6px;font-weight:600;font-size:13px">${p.nombre}</div>
-             <div style="padding:0 6px 4px;font-size:11px;color:#666">Planta CEMEX</div>`,
-          )
-          .addTo(map);
-      });
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([p.lng, p.lat])
-        .addTo(map);
-      plantMarkersRef.current.push(marker);
-    });
-  }, [styleLoaded]);
-
-  // Heatmap layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !styleLoaded) return;
-    const SOURCE = "sitios-heat";
-    const LAYER = "sitios-heat-layer";
-
-    const features = sitios.map((s) => ({
-      type: "Feature" as const,
-      geometry: { type: "Point" as const, coordinates: [s.lng, s.lat] },
-      properties: { volumen: s.volumen_m3 ?? 100 },
+  const allMarkers = useMemo(() => {
+    const siteMarkers = sitios.map((s) => ({
+      type: "sitio" as const,
+      data: s,
+      lng: s.lng,
+      lat: s.lat,
     }));
+    const plantMarkers = showPlants
+      ? PLANTAS_CEMEX.map((p) => ({ type: "planta" as const, data: p, lng: p.lng, lat: p.lat }))
+      : [];
+    return [...siteMarkers, ...plantMarkers];
+  }, [showPlants, sitios]);
 
-    if (map.getLayer(LAYER)) map.removeLayer(LAYER);
-    if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+  function clientToLngLat(clientX: number, clientY: number) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const worldX = centerWorld.x + (clientX - rect.left - rect.width / 2);
+    const worldY = centerWorld.y + (clientY - rect.top - rect.height / 2);
+    return worldToLngLat(worldX, worldY, z);
+  }
 
-    if (showHeatmap && features.length > 0) {
-      map.addSource(SOURCE, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features },
-      });
-      map.addLayer({
-        id: LAYER,
-        type: "heatmap",
-        source: SOURCE,
-        maxzoom: 16,
-        paint: {
-          "heatmap-weight": [
-            "interpolate", ["linear"], ["get", "volumen"],
-            0, 0.1, 5000, 1,
-          ],
-          "heatmap-intensity": [
-            "interpolate", ["linear"], ["zoom"],
-            0, 1, 16, 3,
-          ],
-          "heatmap-color": [
-            "interpolate", ["linear"], ["heatmap-density"],
-            0, "rgba(31,42,147,0)",
-            0.2, "rgba(31,42,147,0.4)",
-            0.5, "rgba(225,37,27,0.6)",
-            0.8, "rgba(245,158,11,0.8)",
-            1, "rgba(255,255,0,0.9)",
-          ],
-          "heatmap-radius": [
-            "interpolate", ["linear"], ["zoom"],
-            0, 4, 16, 60,
-          ],
-          "heatmap-opacity": 0.75,
-        },
-      });
-    }
-  }, [showHeatmap, sitios, styleLoaded]);
+  function zoomAt(nextZoom: number, clientX?: number, clientY?: number) {
+    setView((prev) => {
+      const next = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+      if (next === Math.round(prev.zoom)) return prev;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect || clientX == null || clientY == null) return { ...prev, zoom: next };
 
-  // Isochrones from CEMEX plants (15/30/45 min driving)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !styleLoaded || !token) return;
+      const beforeCenter = lngLatToWorld(prev.lng, prev.lat, Math.round(prev.zoom));
+      const focusWorldBefore = {
+        x: beforeCenter.x + (clientX - rect.left - rect.width / 2),
+        y: beforeCenter.y + (clientY - rect.top - rect.height / 2),
+      };
+      const focusLngLat = worldToLngLat(
+        focusWorldBefore.x,
+        focusWorldBefore.y,
+        Math.round(prev.zoom),
+      );
+      const focusWorldAfter = lngLatToWorld(focusLngLat.lng, focusLngLat.lat, next);
+      const nextCenterWorld = {
+        x: focusWorldAfter.x - (clientX - rect.left - rect.width / 2),
+        y: focusWorldAfter.y - (clientY - rect.top - rect.height / 2),
+      };
+      const nextCenter = worldToLngLat(nextCenterWorld.x, nextCenterWorld.y, next);
+      return { lng: nextCenter.lng, lat: nextCenter.lat, zoom: next };
+    });
+  }
 
-    const SOURCE = "isochrones";
-    const FILL = "isochrones-fill";
-    const LINE = "isochrones-line";
-
-    if (map.getLayer(FILL)) map.removeLayer(FILL);
-    if (map.getLayer(LINE)) map.removeLayer(LINE);
-    if (map.getSource(SOURCE)) map.removeSource(SOURCE);
-
-    if (!showIsochrones) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const all: GeoJSON.Feature[] = [];
-        for (const p of PLANTAS_CEMEX) {
-          const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${p.lng},${p.lat}?contours_minutes=15,30,45&polygons=true&access_token=${token}`;
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const data = await res.json();
-          (data.features as GeoJSON.Feature[] | undefined)?.forEach((f) => {
-            f.properties = { ...f.properties, plantaId: p.id, plantaNombre: p.nombre };
-            all.push(f);
-          });
-        }
-        if (cancelled || !mapRef.current) return;
-        // Sort largest first so smaller isochrones render on top
-        all.sort((a, b) => {
-          const am = (a.properties as { contour?: number } | null)?.contour ?? 0;
-          const bm = (b.properties as { contour?: number } | null)?.contour ?? 0;
-          return bm - am;
-        });
-
-        if (map.getLayer(FILL)) map.removeLayer(FILL);
-        if (map.getLayer(LINE)) map.removeLayer(LINE);
-        if (map.getSource(SOURCE)) map.removeSource(SOURCE);
-
-        map.addSource(SOURCE, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: all },
-        });
-        map.addLayer({
-          id: FILL,
-          type: "fill",
-          source: SOURCE,
-          paint: {
-            "fill-color": [
-              "match", ["get", "contour"],
-              15, "#10B981",
-              30, "#F59E0B",
-              45, "#E1251B",
-              "#999",
-            ],
-            "fill-opacity": 0.18,
-          },
-        });
-        map.addLayer({
-          id: LINE,
-          type: "line",
-          source: SOURCE,
-          paint: {
-            "line-color": [
-              "match", ["get", "contour"],
-              15, "#10B981",
-              30, "#F59E0B",
-              45, "#E1251B",
-              "#999",
-            ],
-            "line-width": 1.5,
-            "line-opacity": 0.7,
-          },
-        });
-      } catch {
-        // silently ignore
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [showIsochrones, styleLoaded, token]);
-
-  // Draggable marker
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (!draggableMarker) {
-      draggableMarkerRef.current?.remove();
-      draggableMarkerRef.current = null;
-      return;
-    }
-    if (!draggableMarkerRef.current) {
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:24px;height:24px;border-radius:9999px;
-        background:hsl(var(--primary, 232 65% 35%));
-        border:3px solid hsl(var(--accent, 38 92% 50%));
-        box-shadow:0 4px 10px rgba(0,0,0,0.4);
-        cursor:grab;
-      `;
-      const m = new mapboxgl.Marker({ element: el, draggable: true })
-        .setLngLat([draggableMarker.lng, draggableMarker.lat])
-        .addTo(map);
-      m.on("dragend", () => {
-        const ll = m.getLngLat();
-        onMarkerDragRef.current?.(ll.lng, ll.lat);
-      });
-      draggableMarkerRef.current = m;
-    } else {
-      draggableMarkerRef.current.setLngLat([draggableMarker.lng, draggableMarker.lat]);
-    }
-  }, [draggableMarker?.lng, draggableMarker?.lat]);
-
-  const legend = useMemo(() => {
-    if (!showIsochrones) return null;
-    return (
-      <div className="absolute bottom-3 left-3 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
-        <div className="font-semibold flex items-center gap-1">
-          <Clock className="h-3 w-3" /> Tiempo desde planta
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-sm" style={{ background: "#10B981" }} /> 15 min
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-sm" style={{ background: "#F59E0B" }} /> 30 min
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-sm" style={{ background: "#E1251B" }} /> 45 min
-        </div>
-      </div>
-    );
-  }, [showIsochrones]);
-
-  if (tokenMissing) {
-    return <MapboxTokenPrompt onSaved={() => setTokenMissing(false)} />;
+  if (!token) {
+    return <MapboxTokenPrompt />;
   }
 
   return (
-    <div className={["relative h-full min-h-[320px] w-full overflow-hidden", className].filter(Boolean).join(" ")}>
-      <div ref={containerRef} className="absolute inset-0" />
+    <div
+      ref={containerRef}
+      className={[
+        "relative h-full min-h-[320px] w-full overflow-hidden bg-muted select-none",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{ touchAction: "none" }}
+      onWheel={(e) => {
+        e.preventDefault();
+        zoomAt(view.zoom + (e.deltaY > 0 ? -1 : 1), e.clientX, e.clientY);
+      }}
+      onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        const world = lngLatToWorld(view.lng, view.lat, z);
+        draggingRef.current = {
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          centerX: world.x,
+          centerY: world.y,
+          moved: false,
+        };
+      }}
+      onPointerMove={(e) => {
+        const drag = draggingRef.current;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        const dx = e.clientX - drag.startX;
+        const dy = e.clientY - drag.startY;
+        if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+        const next = worldToLngLat(drag.centerX - dx, drag.centerY - dy, z);
+        setView((v) => ({ ...v, lng: next.lng, lat: next.lat }));
+      }}
+      onPointerUp={(e) => {
+        const drag = draggingRef.current;
+        draggingRef.current = null;
+        if (drag?.pointerId !== e.pointerId) return;
+        if (!drag.moved) {
+          const ll = clientToLngLat(e.clientX, e.clientY);
+          if (ll) onMapClick?.(ll.lng, ll.lat);
+        }
+      }}
+      onTouchStart={(e) => {
+        if (e.touches.length === 2) {
+          const [a, b] = Array.from(e.touches);
+          pinchRef.current = {
+            distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+            zoom: view.zoom,
+          };
+        }
+      }}
+      onTouchMove={(e) => {
+        if (e.touches.length !== 2 || !pinchRef.current) return;
+        const [a, b] = Array.from(e.touches);
+        const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (!pinchRef.current.distance) return;
+        const delta = Math.log2(distance / pinchRef.current.distance);
+        zoomAt(
+          Math.round(pinchRef.current.zoom + delta),
+          (a.clientX + b.clientX) / 2,
+          (a.clientY + b.clientY) / 2,
+        );
+      }}
+      onTouchEnd={() => {
+        pinchRef.current = null;
+      }}
+    >
+      <div className="absolute inset-0">
+        {tiles.map((t) => (
+          <img
+            key={t.key}
+            src={t.url}
+            alt=""
+            draggable={false}
+            className="absolute max-w-none"
+            style={{ width: TILE_SIZE, height: TILE_SIZE, left: t.left, top: t.top }}
+          />
+        ))}
+      </div>
 
-      {/* Style switcher + 3D toggle */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-        <div className="bg-card border rounded-lg shadow-lg p-1 flex gap-0.5">
-          {(["streets", "satellite", "dark"] as StyleKey[]).map((k) => (
+      {showHeat &&
+        sitios.map((s) => (
+          <HeatSpot key={`heat-${s.id}`} sitio={s} view={view} size={size} zoom={z} />
+        ))}
+
+      {allMarkers.map((m) => {
+        const pos = markerPosition(m.lng, m.lat, centerWorld, size, z);
+        if (!pos) return null;
+        if (m.type === "planta") {
+          return (
+            <button
+              key={`plant-${m.data.id}`}
+              type="button"
+              data-map-marker
+              className="absolute z-10 flex h-8 w-8 items-center justify-center rounded-md border-2 border-card bg-primary text-primary-foreground shadow-lg"
+              style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -50%)" }}
+              title={m.data.nombre}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Factory className="h-4 w-4" />
+            </button>
+          );
+        }
+
+        const sitio = m.data;
+        const isMine = currentUserId != null && sitio.vendedor_id === currentUserId;
+        const Icon = ESTATUS_ICON[sitio.estatus];
+        return (
+          <button
+            key={sitio.id}
+            type="button"
+            data-map-marker
+            aria-label={sitio.nombre_referencia ?? "Sitio"}
+            title={`${sitio.nombre_referencia ?? "Sitio sin nombre"} · ${ESTATUS_LABEL[sitio.estatus]}`}
+            className="absolute z-20 flex items-center justify-center rounded-full border-2 border-card shadow-lg transition-transform active:scale-90"
+            style={{
+              left: pos.x,
+              top: pos.y,
+              width: isMine ? 30 : 26,
+              height: isMine ? 30 : 26,
+              transform: "translate(-50%, -50%)",
+              backgroundColor: ESTATUS_COLOR[sitio.estatus],
+              outline: isMine
+                ? "2px solid color-mix(in oklab, var(--accent) 70%, transparent)"
+                : undefined,
+              outlineOffset: 2,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPinClick?.(sitio);
+            }}
+          >
+            <span
+              dangerouslySetInnerHTML={{
+                __html: renderToStaticMarkup(<Icon color="white" size={14} strokeWidth={2.5} />),
+              }}
+            />
+          </button>
+        );
+      })}
+
+      {draggableMarker && (
+        <DraggablePoint
+          point={draggableMarker}
+          centerWorld={centerWorld}
+          size={size}
+          zoom={z}
+          onDragStart={() => {
+            dragMarkerRef.current = true;
+          }}
+          onDrag={(lng, lat) => {
+            setView((v) => ({ ...v, lng, lat }));
+            onMarkerDrag?.(lng, lat);
+          }}
+          onDragEnd={() => {
+            dragMarkerRef.current = false;
+          }}
+        />
+      )}
+
+      <div data-map-control className="absolute left-3 top-3 z-30 flex flex-col gap-2">
+        <div className="flex rounded-lg border bg-card p-1 shadow-lg">
+          {(["streets", "satellite", "outdoors", "dark"] as StyleKey[]).map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setStyleKey(k)}
-              className={`px-2.5 py-1 text-xs font-medium rounded transition ${
-                styleKey === k ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
+              className={`rounded px-2 py-1 text-xs font-medium transition ${
+                styleKey === k
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-muted"
               }`}
             >
-              {k === "streets" ? "Calles" : k === "satellite" ? "Satélite" : "Oscuro"}
+              {k === "streets"
+                ? "Calles"
+                : k === "satellite"
+                  ? "Satélite"
+                  : k === "outdoors"
+                    ? "Relieve"
+                    : "Oscuro"}
             </button>
           ))}
         </div>
-        <div className="bg-card border rounded-lg shadow-lg p-1 flex gap-0.5">
-          <ToggleBtn active={is3D} onClick={() => setIs3D((v) => !v)} icon={<Box className="h-3.5 w-3.5" />} label="3D" />
-          <ToggleBtn active={showHeatmap} onClick={() => setShowHeatmap((v) => !v)} icon={<Flame className="h-3.5 w-3.5" />} label="Calor" />
-          <ToggleBtn active={showIsochrones} onClick={() => setShowIsochrones((v) => !v)} icon={<Clock className="h-3.5 w-3.5" />} label="Tiempo" />
+        <div className="flex rounded-lg border bg-card p-1 shadow-lg">
+          <ToggleBtn
+            active={showPlants}
+            onClick={() => setShowPlants((v) => !v)}
+            icon={<Factory className="h-3.5 w-3.5" />}
+            label="Plantas"
+          />
+          <ToggleBtn
+            active={showHeat}
+            onClick={() => setShowHeat((v) => !v)}
+            icon={<Flame className="h-3.5 w-3.5" />}
+            label="Calor"
+          />
         </div>
       </div>
 
-      {legend}
+      <div
+        data-map-control
+        className="absolute right-3 top-3 z-30 overflow-hidden rounded-lg border bg-card shadow-lg"
+      >
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
+          onClick={() => zoomAt(view.zoom + 1)}
+          aria-label="Acercar"
+        >
+          +
+        </button>
+        <div className="h-px bg-border" />
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
+          onClick={() => zoomAt(view.zoom - 1)}
+          aria-label="Alejar"
+        >
+          −
+        </button>
+      </div>
+
+      <div className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-lg border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur">
+        <div className="flex items-center gap-1 font-medium text-foreground">
+          <MapIcon className="h-3.5 w-3.5" /> Mapa seguro
+        </div>
+        <div className="mt-0.5 flex items-center gap-1">
+          <Navigation className="h-3 w-3" /> Arrastra, pellizca o toca para crear
+        </div>
+      </div>
     </div>
+  );
+}
+
+function markerPosition(
+  lng: number,
+  lat: number,
+  centerWorld: { x: number; y: number },
+  size: { width: number; height: number },
+  zoom: number,
+) {
+  if (!size.width || !size.height) return null;
+  const world = lngLatToWorld(lng, lat, zoom);
+  return {
+    x: world.x - centerWorld.x + size.width / 2,
+    y: world.y - centerWorld.y + size.height / 2,
+  };
+}
+
+function HeatSpot({
+  sitio,
+  view,
+  size,
+  zoom,
+}: {
+  sitio: MapSitio;
+  view: { lng: number; lat: number };
+  size: { width: number; height: number };
+  zoom: number;
+}) {
+  const centerWorld = lngLatToWorld(view.lng, view.lat, zoom);
+  const pos = markerPosition(sitio.lng, sitio.lat, centerWorld, size, zoom);
+  if (!pos) return null;
+  const radius = clamp((sitio.volumen_m3 ?? 300) / 90, 28, 110);
+  return (
+    <div
+      className="pointer-events-none absolute z-10 rounded-full blur-xl"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: radius,
+        height: radius,
+        transform: "translate(-50%, -50%)",
+        background: "color-mix(in oklab, var(--accent) 42%, transparent)",
+      }}
+    />
+  );
+}
+
+function DraggablePoint({
+  point,
+  centerWorld,
+  size,
+  zoom,
+  onDragStart,
+  onDrag,
+  onDragEnd,
+}: {
+  point: { lng: number; lat: number };
+  centerWorld: { x: number; y: number };
+  size: { width: number; height: number };
+  zoom: number;
+  onDragStart: () => void;
+  onDrag: (lng: number, lat: number) => void;
+  onDragEnd: () => void;
+}) {
+  const pos = markerPosition(point.lng, point.lat, centerWorld, size, zoom);
+  if (!pos) return null;
+  return (
+    <button
+      type="button"
+      data-map-marker
+      className="absolute z-30 h-8 w-8 rounded-full border-4 border-accent bg-primary shadow-2xl active:scale-95"
+      style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -50%)", touchAction: "none" }}
+      aria-label="Ubicación seleccionada"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        onDragStart();
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons !== 1 && e.pointerType !== "touch") return;
+        const parent = (
+          e.currentTarget.parentElement as HTMLElement | null
+        )?.getBoundingClientRect();
+        if (!parent) return;
+        const worldX = centerWorld.x + (e.clientX - parent.left - parent.width / 2);
+        const worldY = centerWorld.y + (e.clientY - parent.top - parent.height / 2);
+        const next = worldToLngLat(worldX, worldY, zoom);
+        onDrag(next.lng, next.lat);
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        onDragEnd();
+      }}
+    />
   );
 }
 
@@ -541,7 +539,7 @@ function ToggleBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2 py-1 text-xs font-medium rounded transition flex items-center gap-1 ${
+      className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition ${
         active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"
       }`}
     >
@@ -551,66 +549,15 @@ function ToggleBtn({
   );
 }
 
-function buildPopupHTML(s: MapSitio, isMine: boolean): string {
-  const color = ESTATUS_COLOR[s.estatus] ?? "#888";
-  const label = ESTATUS_LABEL[s.estatus];
-  const ejecutivo = isMine ? "Tú" : (s.vendedor?.nombre ?? s.vendedor?.email ?? "Sin asignar");
-  return `
-    <div style="padding:6px 8px;font-size:12px;max-width:240px">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:4px">
-        <strong style="font-size:13px">${escapeHtml(s.nombre_referencia ?? "Sitio sin nombre")}</strong>
-        <span style="background:${color};color:white;font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap">${label}</span>
-      </div>
-      <div style="color:#666"><b style="color:#222">Ejecutivo:</b> ${escapeHtml(ejecutivo)}</div>
-      ${s.volumen_m3 != null ? `<div><b>Volumen:</b> ${s.volumen_m3.toLocaleString()} m³</div>` : ""}
-      ${s.direccion ? `<div><b>Dirección:</b> ${escapeHtml(s.direccion)}</div>` : ""}
-      ${s.competidor ? `<div><b>Competidor:</b> ${escapeHtml(s.competidor)}</div>` : ""}
-    </div>
-  `;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
-  );
-}
-
-function MapboxTokenPrompt({ onSaved }: { onSaved: () => void }) {
-  const [token, setToken] = useState("");
+function MapboxTokenPrompt() {
   return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-card border rounded-xl p-6 shadow-sm">
-        <h2 className="font-semibold mb-2">Configura Mapbox</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Pega tu token público de Mapbox. Se guarda solo en este dispositivo.
-          Obtén uno gratis en{" "}
-          <a
-            href="https://account.mapbox.com/access-tokens/"
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary underline"
-          >
-            mapbox.com
-          </a>
-          .
+    <div className="flex h-full min-h-[320px] items-center justify-center bg-muted p-6">
+      <div className="max-w-sm rounded-lg border bg-card p-4 text-center shadow-sm">
+        <Mountain className="mx-auto mb-2 h-8 w-8 text-primary" />
+        <h2 className="font-semibold">Mapa no disponible</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Falta configurar el token público de Mapbox.
         </p>
-        <input
-          className="w-full h-12 px-3 rounded-md border bg-background text-sm"
-          placeholder="pk.eyJ..."
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
-        <button
-          className="mt-3 w-full h-12 rounded-md bg-primary text-primary-foreground font-medium"
-          onClick={() => {
-            if (!token.startsWith("pk.")) return;
-            window.localStorage.setItem("cemex_mapbox_token", token);
-            onSaved();
-            window.location.reload();
-          }}
-        >
-          Guardar y continuar
-        </button>
       </div>
     </div>
   );
