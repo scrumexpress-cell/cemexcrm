@@ -54,6 +54,7 @@ function MapPage() {
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dupDialogOpen, setDupDialogOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
   async function handleSeed() {
