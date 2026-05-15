@@ -497,9 +497,9 @@ function DraggablePoint({
     <button
       type="button"
       data-map-marker
-      className="absolute z-30 h-8 w-8 rounded-full border-4 border-accent bg-primary shadow-2xl active:scale-95"
-      style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -50%)", touchAction: "none" }}
-      aria-label="Ubicación seleccionada"
+      className="absolute z-30 active:scale-95 drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)]"
+      style={{ left: pos.x, top: pos.y, transform: "translate(-50%, -100%)", touchAction: "none" }}
+      aria-label="Nueva oportunidad"
       onPointerDown={(e) => {
         e.stopPropagation();
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
