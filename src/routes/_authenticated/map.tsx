@@ -15,6 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase, type Sitio } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertTriangle, MapPin } from "lucide-react";
 
 type SitioConVendedor = Sitio & {
   vendedor: { nombre: string | null; email: string | null } | null;
