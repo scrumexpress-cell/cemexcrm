@@ -123,6 +123,7 @@ export function MapView({
 
     mapRef.current = map;
     return () => {
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
