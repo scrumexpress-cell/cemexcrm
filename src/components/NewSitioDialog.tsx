@@ -41,6 +41,32 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   const [notas, setNotas] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingAddr, setLoadingAddr] = useState(false);
+
+  // Geocodificación inversa: al abrir el diálogo con coords, jala la dirección
+  useEffect(() => {
+    if (!open || !coords) return;
+    const token = getMapboxToken();
+    if (!token) return;
+    let cancelled = false;
+    setLoadingAddr(true);
+    fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords.lng},${coords.lat}.json?language=es&limit=1&access_token=${token}`,
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const place = data?.features?.[0]?.place_name as string | undefined;
+        if (place) setDireccion((prev) => (prev ? prev : place));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingAddr(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, coords?.lat, coords?.lng]);
 
   function reset() {
     setNombre("");
