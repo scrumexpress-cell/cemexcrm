@@ -153,6 +153,10 @@ function MapPage() {
       toast.error("Toca el mapa para fijar la ubicación");
       return;
     }
+    if (nearbyMatches.length > 0) {
+      setDupDialogOpen(true);
+      return;
+    }
     setDialogOpen(true);
   }
 
