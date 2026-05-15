@@ -102,7 +102,7 @@ export function MapView({
   useEffect(() => {
     if (!draggableMarker) return;
     setView((v) => ({ ...v, lng: draggableMarker.lng, lat: draggableMarker.lat }));
-  }, [draggableMarker?.lng, draggableMarker?.lat]);
+  }, [draggableMarker]);
 
   const z = Math.round(clamp(view.zoom, MIN_ZOOM, MAX_ZOOM));
   const centerWorld = lngLatToWorld(view.lng, view.lat, z);
