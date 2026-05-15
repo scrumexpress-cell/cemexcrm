@@ -226,7 +226,7 @@ function MapPage() {
 
       <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
-          sitios={placing ? [] : filtered}
+          sitios={filtered}
           currentUserId={user?.id ?? null}
           onPinClick={(s) => {
             if (placing) return;
