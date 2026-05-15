@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { type Map as MapboxMap, type Marker, type Popup } from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
