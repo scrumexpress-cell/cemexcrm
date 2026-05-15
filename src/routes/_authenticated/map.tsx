@@ -226,7 +226,7 @@ function MapPage() {
 
       <div className="flex-1 min-h-[360px] relative overflow-hidden">
         <MapView
-          sitios={placing ? [] : filtered}
+          sitios={filtered}
           currentUserId={user?.id ?? null}
           onPinClick={(s) => {
             if (placing) return;
@@ -328,7 +328,7 @@ function MapPage() {
       </div>
 
       {selected && !placing && (
-        <div className="absolute inset-x-0 bottom-0 z-20 bg-card border-t rounded-t-2xl shadow-2xl p-4 pb-6 animate-in slide-in-from-bottom">
+        <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:w-[340px] z-20 bg-card border rounded-2xl shadow-2xl p-4 animate-in slide-in-from-bottom">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold truncate">
