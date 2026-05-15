@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Check, Crosshair, Sparkles } from "lucide-react";
+import { Plus, X, Check, Crosshair, Sparkles, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { MapView } from "@/components/MapView";
 import { NewSitioDialog } from "@/components/NewSitioDialog";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ function MapPage() {
   const [filterEstatus, setFilterEstatus] = useState<string>("all");
   const [filterVolumen, setFilterVolumen] = useState<string>("all");
   const [filterOwner, setFilterOwner] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<SitioConVendedor | null>(null);
   const [placing, setPlacing] = useState(false);
   const [placeCoords, setPlaceCoords] = useState<{ lng: number; lat: number } | null>(null);
@@ -100,6 +102,7 @@ function MapPage() {
   }
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
       if (filterOwner === "mine" && s.vendedor_id !== user?.id) return false;
@@ -112,12 +115,18 @@ function MapPage() {
           return false;
         if (filterVolumen === "5000+" && !(v >= 5000)) return false;
       }
+      if (q) {
+        const hay = `${s.nombre_referencia ?? ""} ${s.direccion ?? ""} ${
+          s.licitante ?? ""
+        } ${s.vendedor?.nombre ?? ""} ${s.vendedor?.email ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
+  }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id, search]);
 
   // Sitios existentes dentro de un radio (anti-duplicados)
-  const PROXIMITY_RADIUS_M = 20;
+  const PROXIMITY_RADIUS_M = 150;
   const nearbyMatches = useMemo(() => {
     if (!placeCoords) return [];
     return sitios
@@ -171,7 +180,17 @@ function MapPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col relative">
-      <div className="px-3 py-2 border-b bg-card flex gap-2 overflow-x-auto">
+      <div className="px-3 py-2 border-b bg-card space-y-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre, dirección, licitante o vendedor..."
+            className="h-9 pl-8"
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto">
         <Select value={filterEstatus} onValueChange={setFilterEstatus}>
           <SelectTrigger className="h-9 w-[160px] shrink-0">
             <SelectValue />
@@ -221,6 +240,7 @@ function MapPage() {
         )}
         <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
           {loading ? "..." : `${filtered.length} sitios`}
+        </div>
         </div>
       </div>
 

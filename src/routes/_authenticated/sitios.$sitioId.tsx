@@ -8,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ObraPanel } from "@/components/ObraPanel";
 import { EtapaStepper } from "@/components/EtapaStepper";
+import { SitioTareas } from "@/components/SitioTareas";
+import { SitioComentarios } from "@/components/SitioComentarios";
+import { SitioAcciones } from "@/components/SitioAcciones";
 import {
   Select,
   SelectContent,
@@ -299,8 +302,25 @@ function SitioDetailPage() {
         </Button>
       </div>
 
+      <div className="mt-4">
+        <SitioAcciones
+          sitioId={sitio.id}
+          vendedorId={sitio.vendedor_id}
+          nombre={sitio.nombre_referencia}
+          onReassigned={() => void load()}
+        />
+      </div>
+
+      <div className="mt-6">
+        <SitioTareas sitioId={sitio.id} vendedorId={sitio.vendedor_id} />
+      </div>
+
       <div className="mt-6">
         <ObraPanel sitio={sitio} onChanged={() => void load()} />
+      </div>
+
+      <div className="mt-6">
+        <SitioComentarios sitioId={sitio.id} vendedorId={sitio.vendedor_id} />
       </div>
 
       <div className="mt-6">

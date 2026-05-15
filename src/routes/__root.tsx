@@ -63,9 +63,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d3d1aad2-a2cd-4214-af4d-31ced4861d3e/id-preview-9900865e--b7cd507b-6400-40d4-993a-cd1db84e4763.lovable.app-1778530957703.png" },
         { name: "twitter:card", content: "summary_large_image" },
         { property: "og:type", content: "website" },
+        { name: "theme-color", content: "#0E2C66" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+        { name: "apple-mobile-web-app-title", content: "CEMEX Sites" },
       ],
       links: [
         { rel: "stylesheet", href: appCss },
+        { rel: "manifest", href: "/manifest.webmanifest" },
         {
           rel: "stylesheet",
           href: "https://api.mapbox.com/mapbox-gl-js/v3.23.1/mapbox-gl.css",

@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
+import { Route as AuthenticatedDiaRouteImport } from './routes/_authenticated/dia'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAlertasRouteImport } from './routes/_authenticated/alertas'
 import { Route as AuthenticatedSitiosNuevoRouteImport } from './routes/_authenticated/sitios.nuevo'
@@ -33,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const STokenRoute = STokenRouteImport.update({
+  id: '/s/$token',
+  path: '/s/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
   id: '/map',
   path: '/map',
@@ -41,6 +48,11 @@ const AuthenticatedMapRoute = AuthenticatedMapRouteImport.update({
 const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDiaRoute = AuthenticatedDiaRouteImport.update({
+  id: '/dia',
+  path: '/dia',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -71,8 +83,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/alertas': typeof AuthenticatedAlertasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dia': typeof AuthenticatedDiaRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/map': typeof AuthenticatedMapRoute
+  '/s/$token': typeof STokenRoute
   '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
@@ -81,8 +95,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/alertas': typeof AuthenticatedAlertasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dia': typeof AuthenticatedDiaRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/map': typeof AuthenticatedMapRoute
+  '/s/$token': typeof STokenRoute
   '/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
@@ -93,8 +109,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/alertas': typeof AuthenticatedAlertasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/dia': typeof AuthenticatedDiaRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
+  '/s/$token': typeof STokenRoute
   '/_authenticated/sitios/$sitioId': typeof AuthenticatedSitiosSitioIdRoute
   '/_authenticated/sitios/nuevo': typeof AuthenticatedSitiosNuevoRoute
 }
@@ -105,8 +123,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/alertas'
     | '/dashboard'
+    | '/dia'
     | '/leads'
     | '/map'
+    | '/s/$token'
     | '/sitios/$sitioId'
     | '/sitios/nuevo'
   fileRoutesByTo: FileRoutesByTo
@@ -115,8 +135,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/alertas'
     | '/dashboard'
+    | '/dia'
     | '/leads'
     | '/map'
+    | '/s/$token'
     | '/sitios/$sitioId'
     | '/sitios/nuevo'
   id:
@@ -126,8 +148,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/alertas'
     | '/_authenticated/dashboard'
+    | '/_authenticated/dia'
     | '/_authenticated/leads'
     | '/_authenticated/map'
+    | '/s/$token'
     | '/_authenticated/sitios/$sitioId'
     | '/_authenticated/sitios/nuevo'
   fileRoutesById: FileRoutesById
@@ -136,6 +160,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  STokenRoute: typeof STokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -161,6 +186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/s/$token': {
+      id: '/s/$token'
+      path: '/s/$token'
+      fullPath: '/s/$token'
+      preLoaderRoute: typeof STokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/map': {
       id: '/_authenticated/map'
       path: '/map'
@@ -173,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof AuthenticatedLeadsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dia': {
+      id: '/_authenticated/dia'
+      path: '/dia'
+      fullPath: '/dia'
+      preLoaderRoute: typeof AuthenticatedDiaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -209,6 +248,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAlertasRoute: typeof AuthenticatedAlertasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiaRoute: typeof AuthenticatedDiaRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSitiosSitioIdRoute: typeof AuthenticatedSitiosSitioIdRoute
@@ -218,6 +258,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAlertasRoute: AuthenticatedAlertasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiaRoute: AuthenticatedDiaRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSitiosSitioIdRoute: AuthenticatedSitiosSitioIdRoute,
@@ -232,7 +273,18 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  STokenRoute: STokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
