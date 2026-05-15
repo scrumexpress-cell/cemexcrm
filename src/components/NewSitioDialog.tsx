@@ -151,6 +151,16 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
                 placeholder="1500"
                 className="h-10"
               />
+              {volumen && Number(volumen) >= 5000 && (
+                <p className="text-xs text-red-600 font-medium">
+                  🔴 Volumen alto — se notificará a gerente y head
+                </p>
+              )}
+              {volumen && Number(volumen) >= 500 && Number(volumen) < 5000 && (
+                <p className="text-xs text-yellow-600 font-medium">
+                  🟡 Volumen medio — se notificará al gerente
+                </p>
+              )}
             </div>
           </div>
 

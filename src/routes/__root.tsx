@@ -68,7 +68,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "stylesheet", href: appCss },
         {
           rel: "stylesheet",
-          href: "https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css",
+          href: "https://api.mapbox.com/mapbox-gl-js/v3.23.1/mapbox-gl.css",
         },
         {
           rel: "preconnect",
