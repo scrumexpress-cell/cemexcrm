@@ -520,7 +520,9 @@ function DraggablePoint({
         e.stopPropagation();
         onDragEnd();
       }}
-    />
+    >
+      <MapPin className="h-10 w-10 fill-primary text-primary-foreground stroke-[2.5]" />
+    </button>
   );
 }
 
