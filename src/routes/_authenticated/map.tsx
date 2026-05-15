@@ -106,16 +106,16 @@ function MapPage() {
     });
   }, [sitios, filterEstatus, filterVolumen, filterOwner, user?.id]);
 
-  // Nearby existing sitio (within 80 m) while placing — to prevent duplicates
-  const nearbyExisting = useMemo(() => {
-    if (!placeCoords) return null;
-    let best: { sitio: SitioConVendedor; d: number } | null = null;
-    for (const s of sitios) {
-      const d = distMeters(placeCoords, { lat: s.lat, lng: s.lng });
-      if (d <= 80 && (!best || d < best.d)) best = { sitio: s, d };
-    }
-    return best;
+  // Sitios existentes dentro de un radio (anti-duplicados)
+  const PROXIMITY_RADIUS_M = 100;
+  const nearbyMatches = useMemo(() => {
+    if (!placeCoords) return [];
+    return sitios
+      .map((s) => ({ sitio: s, d: distMeters(placeCoords, { lat: s.lat, lng: s.lng }) }))
+      .filter((x) => x.d <= PROXIMITY_RADIUS_M)
+      .sort((a, b) => a.d - b.d);
   }, [placeCoords, sitios]);
+  const nearbyExisting = nearbyMatches[0] ?? null;
 
   function startPlacing() {
     setSelected(null);
