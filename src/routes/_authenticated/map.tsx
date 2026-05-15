@@ -400,6 +400,89 @@ function MapPage() {
           void load();
         }}
       />
+
+      <Dialog open={dupDialogOpen} onOpenChange={setDupDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Posible duplicado
+            </DialogTitle>
+            <DialogDescription>
+              Encontramos {nearbyMatches.length}{" "}
+              {nearbyMatches.length === 1 ? "oportunidad" : "oportunidades"} a menos
+              de {PROXIMITY_RADIUS_M} m. Verifica que no sea el mismo lead antes de
+              registrar uno nuevo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {nearbyMatches.map(({ sitio, d }) => {
+              const mine = sitio.vendedor_id === user?.id;
+              return (
+                <button
+                  key={sitio.id}
+                  type="button"
+                  onClick={() => {
+                    setDupDialogOpen(false);
+                    cancelPlacing();
+                    void navigate({
+                      to: "/sitios/$sitioId",
+                      params: { sitioId: sitio.id },
+                    });
+                  }}
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="font-medium text-sm truncate">
+                      {sitio.nombre_referencia ?? "Sitio sin nombre"}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-[10px]"
+                      style={{ borderColor: ESTATUS_COLOR[sitio.estatus] }}
+                    >
+                      {ESTATUS_LABEL[sitio.estatus]}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    <span>{Math.round(d)} m</span>
+                    <span>·</span>
+                    <span className="truncate">
+                      {mine
+                        ? "Tú"
+                        : (sitio.vendedor?.nombre ??
+                          sitio.vendedor?.email ??
+                          "Otro vendedor")}
+                    </span>
+                    {sitio.volumen_m3 != null && (
+                      <>
+                        <span>·</span>
+                        <span>{sitio.volumen_m3} m³</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDupDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setDupDialogOpen(false);
+                setDialogOpen(true);
+              }}
+            >
+              Crear de todos modos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
