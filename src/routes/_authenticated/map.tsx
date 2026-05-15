@@ -247,13 +247,13 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute top-3 left-3 right-20 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-sm space-y-1">
-            <div className="font-medium">Ubica el nuevo sitio</div>
-            <div className="text-xs text-muted-foreground">
-              Toca el mapa o arrastra el pin azul para fijar el punto.
+          <div className="absolute bottom-24 inset-x-4 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
+            <div className="font-medium text-sm">Ubica el nuevo sitio</div>
+            <div className="text-muted-foreground">
+              Toca el mapa o arrastra el pin para fijar el punto.
             </div>
             {nearbyExisting && (
-              <div className="text-xs text-amber-700 dark:text-amber-400 font-medium space-y-1 pt-1">
+              <div className="text-amber-700 dark:text-amber-400 font-medium space-y-1 pt-1">
                 <div>
                   ⚠ Hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
                   {nearbyExisting.sitio.vendedor_id === user?.id
