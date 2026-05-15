@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
-import { Factory, Flame, Map as MapIcon, Mountain, Navigation } from "lucide-react";
+import { Factory, Flame, Map as MapIcon, MapPin, Mountain, Navigation } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
