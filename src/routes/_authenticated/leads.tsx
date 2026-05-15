@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flame, MapPin, AlertTriangle } from "lucide-react";
+import { Briefcase, Flame, MapPin, AlertTriangle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   supabase,
   type Sitio,
@@ -59,6 +60,7 @@ function LeadsPage() {
   const [filterEstatus, setFilterEstatus] = useState("all");
   const [filterPrioridad, setFilterPrioridad] = useState("todos");
   const [filterSeguimiento, setFilterSeguimiento] = useState("todos");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     void load();
@@ -93,6 +95,7 @@ function LeadsPage() {
   }
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
       const v = s.volumen_m3 ?? 0;
@@ -105,10 +108,18 @@ function LeadsPage() {
         if (filterSeguimiento === "stale14" && d < 14) return false;
         if (filterSeguimiento === "stale30" && d < 30) return false;
       }
+      if (q) {
+        const hay = `${s.nombre_referencia ?? ""} ${s.direccion ?? ""} ${
+          s.licitante ?? ""
+        } ${s.notas ?? ""} ${s.profiles?.nombre ?? ""} ${
+          s.profiles?.email ?? ""
+        }`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sitios, filterEstatus, filterPrioridad, filterSeguimiento, lastInteraction]);
+  }, [sitios, filterEstatus, filterPrioridad, filterSeguimiento, lastInteraction, search]);
 
   const porEtapa = useMemo(() => {
     const map: Record<SitioEtapa, SitioConProfile[]> = {
@@ -138,6 +149,16 @@ function LeadsPage() {
         Vista Kanban por etapa.{" "}
         {profile?.role === "gerente" ? "Tu zona." : "Todas las zonas."}
       </p>
+
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nombre, dirección, licitante o vendedor..."
+          className="h-9 pl-8"
+        />
+      </div>
 
       <div className="flex gap-2 mb-3 overflow-x-auto">
         <Select value={filterPrioridad} onValueChange={setFilterPrioridad}>

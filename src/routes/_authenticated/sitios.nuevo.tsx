@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Camera, Crosshair, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Crosshair, Factory, Loader2 } from "lucide-react";
 import { MapView } from "@/components/MapView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase, type SitioEstatus } from "@/integrations/supabase/client";
+import {
+  supabase,
+  type SitioCercano,
+  type SitioEstatus,
+} from "@/integrations/supabase/client";
 import { ESTATUS_LABEL, ESTATUS_OPTIONS } from "@/lib/sitio-utils";
+import { plantaMasCercana } from "@/lib/geo";
+import { enqueueSitio } from "@/lib/offline-queue";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -36,6 +42,31 @@ function NuevoSitioPage() {
   const [notas, setNotas] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cercanos, setCercanos] = useState<SitioCercano[]>([]);
+
+  const plantaCercana = coords ? plantaMasCercana(coords) : null;
+
+  // Detección de duplicados por proximidad cuando cambian coords
+  useEffect(() => {
+    if (!coords) {
+      setCercanos([]);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .rpc("sitios_cercanos", {
+        p_lat: coords.lat,
+        p_lng: coords.lng,
+        p_radio_m: 300,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setCercanos(error ? [] : ((data as SitioCercano[]) ?? []));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [coords?.lat, coords?.lng]);
 
   useEffect(() => {
     // Solo intentar GPS automáticamente si el permiso ya fue concedido
@@ -101,23 +132,40 @@ function NuevoSitioPage() {
     if (!user) return;
     setSubmitting(true);
 
+    const payload = {
+      lat: coords.lat,
+      lng: coords.lng,
+      nombre_referencia: nombre || null,
+      direccion: direccion || null,
+      estatus,
+      volumen_m3: volumen ? Number(volumen) : null,
+      vendedor_id: user.id,
+      zona_id: profile?.zona_id ?? null,
+      notas: notas || null,
+    };
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await enqueueSitio(payload);
+      setSubmitting(false);
+      toast.success("Sin conexión: el sitio se sincronizará cuando vuelvas a estar en línea");
+      navigate({ to: "/map" });
+      return;
+    }
+
     const { data: sitio, error } = await supabase
       .from("sitios")
-      .insert({
-        lat: coords.lat,
-        lng: coords.lng,
-        nombre_referencia: nombre || null,
-        direccion: direccion || null,
-        estatus,
-        volumen_m3: volumen ? Number(volumen) : null,
-        vendedor_id: user.id,
-        zona_id: profile?.zona_id ?? null,
-        notas: notas || null,
-      })
+      .insert(payload)
       .select()
       .single();
 
     if (error || !sitio) {
+      if (error && /network|fetch/i.test(error.message)) {
+        await enqueueSitio(payload);
+        setSubmitting(false);
+        toast.success("Sin conexión: el sitio se sincronizará después");
+        navigate({ to: "/map" });
+        return;
+      }
       setSubmitting(false);
       toast.error(`Error al crear sitio: ${error?.message ?? "desconocido"}`);
       return;
@@ -175,6 +223,52 @@ function NuevoSitioPage() {
       </div>
 
       <form onSubmit={onSubmit} className="flex-1 px-4 py-4 space-y-4">
+        {cercanos.length > 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm space-y-2">
+            <div className="flex items-center gap-1.5 font-medium text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4" />
+              {cercanos.length === 1
+                ? "Posible duplicado a menos de 300 m"
+                : `${cercanos.length} obras cercanas (≤300 m)`}
+            </div>
+            <ul className="space-y-1">
+              {cercanos.slice(0, 3).map((c) => (
+                <li key={c.id}>
+                  <Link
+                    to="/sitios/$sitioId"
+                    params={{ sitioId: c.id }}
+                    className="block rounded border bg-card px-2 py-1.5 hover:bg-muted/50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium truncate text-sm">
+                        {c.nombre_referencia ?? "Sin nombre"}
+                      </span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground shrink-0">
+                        {Math.round(c.distancia_m)} m
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {c.vendedor_id === user?.id
+                        ? "Tú"
+                        : (c.vendedor_nombre ?? c.vendedor_email ?? "Otro vendedor")}
+                      {c.volumen_m3 != null && ` · ${c.volumen_m3} m³`}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {plantaCercana && plantaCercana.distancia <= 30000 && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Factory className="h-3.5 w-3.5" />
+            Planta más cercana:{" "}
+            <span className="font-medium text-foreground">{plantaCercana.planta.nombre}</span>{" "}
+            ({(plantaCercana.distancia / 1000).toFixed(1)} km)
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>Nombre / referencia</Label>
           <Input

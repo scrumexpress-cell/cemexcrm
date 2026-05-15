@@ -108,3 +108,59 @@ export interface Alerta {
   leida: boolean;
   created_at: string;
 }
+
+export type TareaTipo =
+  | "llamada"
+  | "visita"
+  | "cotizacion"
+  | "seguimiento"
+  | "muestra"
+  | "otro";
+
+export interface Tarea {
+  id: string;
+  sitio_id: string;
+  vendedor_id: string | null;
+  creada_por: string | null;
+  tipo: TareaTipo;
+  titulo: string;
+  descripcion: string | null;
+  fecha_objetivo: string;
+  completada: boolean;
+  completada_en: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SitioComentario {
+  id: string;
+  sitio_id: string;
+  autor_id: string | null;
+  mensaje: string;
+  mencion_a: string | null;
+  created_at: string;
+}
+
+export interface SitioShare {
+  id: string;
+  sitio_id: string;
+  token: string;
+  creado_por: string | null;
+  expira_en: string | null;
+  created_at: string;
+}
+
+export interface SitioCercano {
+  id: string;
+  nombre_referencia: string | null;
+  direccion: string | null;
+  estatus: SitioEstatus;
+  volumen_m3: number | null;
+  lat: number;
+  lng: number;
+  vendedor_id: string | null;
+  vendedor_nombre: string | null;
+  vendedor_email: string | null;
+  distancia_m: number;
+  created_at: string;
+}

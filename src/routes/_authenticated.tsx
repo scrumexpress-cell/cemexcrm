@@ -9,9 +9,17 @@ import {
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, MapIcon, Bell, BarChart3, Briefcase } from "lucide-react";
+import { LogOut, MapIcon, Bell, BarChart3, Briefcase, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resetAndSeedAll } from "@/lib/seed-sitios";
+import {
+  registerServiceWorker,
+  ensureNotificationPermission,
+  notifyLocal,
+  subscribeForPush,
+} from "@/lib/pwa";
+import { syncPending, watchOnline } from "@/lib/offline-queue";
+import { toast } from "sonner";
 import cemexLogo from "@/assets/cemex-logo.jpg";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -53,16 +61,48 @@ function AuthLayout() {
       }
     })();
     void refreshUnread();
+
+    // PWA: registrar service worker + pedir permiso + intentar suscribir a push
+    void (async () => {
+      await registerServiceWorker();
+      const ok = await ensureNotificationPermission();
+      if (ok) {
+        await subscribeForPush(user.id);
+      }
+    })();
+
+    // Drenar cola offline cuando hay red
+    void syncPending().then((r) => {
+      if (r.ok > 0) toast.success(`${r.ok} sitio(s) sincronizado(s) desde modo offline`);
+    });
+    const unwatchOnline = watchOnline(() => {
+      void syncPending().then((r) => {
+        if (r.ok > 0) toast.success(`${r.ok} sitio(s) sincronizado(s)`);
+      });
+    });
+
     const ch = supabase
       .channel("alertas-rt")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "alertas", filter: `usuario_id=eq.${user.id}` },
-        () => void refreshUnread(),
+        (payload) => {
+          void refreshUnread();
+          const row = payload.new as { mensaje?: string | null; tipo?: string | null; sitio_id?: string | null } | null;
+          if (payload.eventType === "INSERT" && row) {
+            notifyLocal({
+              title: "CEMEX Sites — nueva alerta",
+              body: row.mensaje ?? row.tipo ?? "Alerta",
+              tag: `alerta-${row.sitio_id ?? "general"}`,
+              url: row.sitio_id ? `/sitios/${row.sitio_id}` : "/alertas",
+            });
+          }
+        },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
+      unwatchOnline();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -91,7 +131,7 @@ function AuthLayout() {
     label,
     badge,
   }: {
-    to: "/map" | "/alertas" | "/dashboard" | "/leads";
+    to: "/map" | "/alertas" | "/dashboard" | "/leads" | "/dia";
     icon: typeof MapIcon;
     label: string;
     badge?: number;
@@ -147,6 +187,7 @@ function AuthLayout() {
         <Outlet />
       </main>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
+        <NavLink to="/dia" icon={Sun} label="Mi día" />
         <NavLink to="/map" icon={MapIcon} label="Mapa" />
         <NavLink to="/leads" icon={Briefcase} label="Leads" />
         <NavLink to="/alertas" icon={Bell} label="Alertas" badge={unread} />
