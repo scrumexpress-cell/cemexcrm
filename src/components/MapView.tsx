@@ -99,10 +99,8 @@ export function MapView({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!draggableMarker) return;
-    setView((v) => ({ ...v, lng: draggableMarker.lng, lat: draggableMarker.lat }));
-  }, [draggableMarker]);
+  // No recentrar automáticamente al cambiar el marcador: provoca que el mapa
+  // "salte" cuando el usuario hace tap para ubicar la oportunidad.
 
   const z = Math.round(clamp(view.zoom, MIN_ZOOM, MAX_ZOOM));
   const centerWorld = lngLatToWorld(view.lng, view.lat, z);
