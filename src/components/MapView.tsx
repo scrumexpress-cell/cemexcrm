@@ -93,6 +93,27 @@ export function MapView({
       setStyleLoaded((v) => v + 1);
     });
 
+    // Silenciar advertencias de íconos faltantes en el sprite del estilo
+    map.on("styleimagemissing", (e) => {
+      const id = (e as unknown as { id: string }).id;
+      if (!map.hasImage(id)) {
+        const empty = { width: 1, height: 1, data: new Uint8Array(4) };
+        try {
+          map.addImage(id, empty as unknown as ImageData);
+        } catch {
+          /* noop */
+        }
+      }
+    });
+
+    // Forzar resize después de montar (el contenedor flex puede tener 0px al inicio)
+    const ro = new ResizeObserver(() => {
+      map.resize();
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+    setTimeout(() => map.resize(), 0);
+    setTimeout(() => map.resize(), 200);
+
     map.on("click", (e) => {
       // Ignore clicks on markers (handled separately)
       const target = e.originalEvent.target as HTMLElement | null;
