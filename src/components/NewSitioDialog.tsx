@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMapboxToken } from "@/lib/mapbox-token";
 import { Camera, Loader2, MapPin } from "lucide-react";
 import {
   Dialog,
