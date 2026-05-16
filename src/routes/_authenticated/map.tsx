@@ -41,11 +41,7 @@ function distMeters(a: { lat: number; lng: number }, b: { lat: number; lng: numb
     Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-import {
-  ESTATUS_COLOR,
-  ESTATUS_LABEL,
-  ESTATUS_OPTIONS,
-} from "@/lib/sitio-utils";
+import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_OPTIONS } from "@/lib/sitio-utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/map")({
@@ -67,7 +63,9 @@ function MapPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dupDialogOpen, setDupDialogOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
-  const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(
+    null,
+  );
 
   const locateUser = (showErrors = false) => {
     if (!navigator.geolocation) {
@@ -143,8 +141,7 @@ function MapPage() {
         const v = s.volumen_m3 ?? 0;
         if (filterVolumen === "0-499" && !(v < 500)) return false;
         if (filterVolumen === "500-999" && !(v >= 500 && v < 1000)) return false;
-        if (filterVolumen === "1000-4999" && !(v >= 1000 && v < 5000))
-          return false;
+        if (filterVolumen === "1000-4999" && !(v >= 1000 && v < 5000)) return false;
         if (filterVolumen === "5000+" && !(v >= 5000)) return false;
       }
       if (q) {
@@ -223,56 +220,56 @@ function MapPage() {
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
-        <Select value={filterEstatus} onValueChange={setFilterEstatus}>
-          <SelectTrigger className="h-9 w-[160px] shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estatus</SelectItem>
-            {ESTATUS_OPTIONS.map((e) => (
-              <SelectItem key={e} value={e}>
-                {ESTATUS_LABEL[e]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterVolumen} onValueChange={setFilterVolumen}>
-          <SelectTrigger className="h-9 w-[150px] shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo volumen</SelectItem>
-            <SelectItem value="0-499">&lt; 500 m³</SelectItem>
-            <SelectItem value="500-999">500 – 999 m³</SelectItem>
-            <SelectItem value="1000-4999">1,000 – 4,999 m³</SelectItem>
-            <SelectItem value="5000+">5,000+ m³</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterOwner} onValueChange={setFilterOwner}>
-          <SelectTrigger className="h-9 w-[150px] shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los dueños</SelectItem>
-            <SelectItem value="mine">Solo míos</SelectItem>
-            <SelectItem value="others">De otros</SelectItem>
-          </SelectContent>
-        </Select>
-        {!loading && sitios.length === 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-9 shrink-0"
-            onClick={handleSeed}
-            disabled={seeding}
-          >
-            <Sparkles className="h-4 w-4 mr-1" />
-            {seeding ? "Cargando..." : "10 ejemplos"}
-          </Button>
-        )}
-        <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
-          {loading ? "..." : `${filtered.length} sitios`}
-        </div>
+          <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+            <SelectTrigger className="h-9 w-[160px] shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estatus</SelectItem>
+              {ESTATUS_OPTIONS.map((e) => (
+                <SelectItem key={e} value={e}>
+                  {ESTATUS_LABEL[e]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterVolumen} onValueChange={setFilterVolumen}>
+            <SelectTrigger className="h-9 w-[150px] shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo volumen</SelectItem>
+              <SelectItem value="0-499">&lt; 500 m³</SelectItem>
+              <SelectItem value="500-999">500 – 999 m³</SelectItem>
+              <SelectItem value="1000-4999">1,000 – 4,999 m³</SelectItem>
+              <SelectItem value="5000+">5,000+ m³</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterOwner} onValueChange={setFilterOwner}>
+            <SelectTrigger className="h-9 w-[150px] shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los dueños</SelectItem>
+              <SelectItem value="mine">Solo míos</SelectItem>
+              <SelectItem value="others">De otros</SelectItem>
+            </SelectContent>
+          </Select>
+          {!loading && sitios.length === 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 shrink-0"
+              onClick={handleSeed}
+              disabled={seeding}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              {seeding ? "Cargando..." : "10 ejemplos"}
+            </Button>
+          )}
+          <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
+            {loading ? "..." : `${filtered.length} sitios`}
+          </div>
         </div>
       </div>
 
@@ -353,11 +350,7 @@ function MapPage() {
 
         {placing && (
           <div className="absolute bottom-4 inset-x-3 z-30 grid grid-cols-[1fr_48px_1fr] gap-2 sm:inset-x-4">
-            <Button
-              variant="secondary"
-              className="h-12 min-w-0 shadow-lg"
-              onClick={cancelPlacing}
-            >
+            <Button variant="secondary" className="h-12 min-w-0 shadow-lg" onClick={cancelPlacing}>
               <X className="h-4 w-4 mr-1" /> Cancelar
             </Button>
             <Button
@@ -401,11 +394,7 @@ function MapPage() {
                 {selected.direccion ?? `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
               </p>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setSelected(null)}
-            >
+            <Button size="icon" variant="ghost" onClick={() => setSelected(null)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -419,27 +408,20 @@ function MapPage() {
               {ESTATUS_LABEL[selected.estatus]}
             </Badge>
             {selected.volumen_m3 != null && (
-              <Badge variant="outline">
-                {selected.volumen_m3.toLocaleString()} m³
-              </Badge>
+              <Badge variant="outline">{selected.volumen_m3.toLocaleString()} m³</Badge>
             )}
             {selected.vendedor_id === user?.id ? (
-              <Badge className="bg-accent text-accent-foreground">
-                Tú llevas este lead
-              </Badge>
+              <Badge className="bg-accent text-accent-foreground">Tú llevas este lead</Badge>
             ) : (
               <Badge variant="secondary">
                 Asignado a{" "}
-                {selected.vendedor?.nombre ??
-                  selected.vendedor?.email ??
-                  "otro vendedor"}
+                {selected.vendedor?.nombre ?? selected.vendedor?.email ?? "otro vendedor"}
               </Badge>
             )}
           </div>
           {selected.vendedor_id !== user?.id && (
             <p className="text-xs text-muted-foreground mb-3">
-              Solo el vendedor asignado puede dar seguimiento a esta
-              oportunidad.
+              Solo el vendedor asignado puede dar seguimiento a esta oportunidad.
             </p>
           )}
           <Link
@@ -473,9 +455,9 @@ function MapPage() {
             </DialogTitle>
             <DialogDescription>
               Encontramos {nearbyMatches.length}{" "}
-              {nearbyMatches.length === 1 ? "oportunidad" : "oportunidades"} a menos
-              de {PROXIMITY_RADIUS_M} m. Verifica que no sea el mismo lead antes de
-              registrar uno nuevo.
+              {nearbyMatches.length === 1 ? "oportunidad" : "oportunidades"} a menos de{" "}
+              {PROXIMITY_RADIUS_M} m. Verifica que no sea el mismo lead antes de registrar uno
+              nuevo.
             </DialogDescription>
           </DialogHeader>
 
@@ -515,9 +497,7 @@ function MapPage() {
                     <span className="truncate">
                       {mine
                         ? "Tú"
-                        : (sitio.vendedor?.nombre ??
-                          sitio.vendedor?.email ??
-                          "Otro vendedor")}
+                        : (sitio.vendedor?.nombre ?? sitio.vendedor?.email ?? "Otro vendedor")}
                     </span>
                     {sitio.volumen_m3 != null && (
                       <>

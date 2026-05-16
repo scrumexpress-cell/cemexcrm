@@ -415,7 +415,6 @@ export function MapView({
           −
         </button>
       </div>
-
     </div>
   );
 }
