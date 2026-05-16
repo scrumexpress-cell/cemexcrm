@@ -44,7 +44,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
   const [estatus, setEstatus] = useState<SitioEstatus>("prospecto");
-  const [volumen, setVolumen] = useState("");
+  const [rangoVolumen, setRangoVolumen] = useState<"bajo" | "medio" | "alto">("bajo");
   const [notas, setNotas] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -114,7 +114,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     setNombre("");
     setDireccion("");
     setEstatus("prospecto");
-    setVolumen("");
+    setRangoVolumen("bajo");
     setNotas("");
     setPhoto(null);
     setCercanos([]);
@@ -131,7 +131,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
       nombre_referencia: nombre || null,
       direccion: direccion || null,
       estatus,
-      volumen_m3: volumen ? Number(volumen) : null,
+      volumen_m3: rangoVolumen === "alto" ? 5000 : rangoVolumen === "medio" ? 1000 : 100,
       vendedor_id: user.id,
       zona_id: profile?.zona_id ?? null,
       notas: notas || null,
@@ -271,42 +271,50 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Estatus</Label>
-              <Select value={estatus} onValueChange={(v) => setEstatus(v as SitioEstatus)}>
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESTATUS_OPTIONS.map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {ESTATUS_LABEL[e]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Volumen (m³)</Label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={volumen}
-                onChange={(e) => setVolumen(e.target.value)}
-                placeholder="1500"
-                className="h-10"
-              />
-              {volumen && Number(volumen) >= 5000 && (
-                <p className="text-xs text-red-600 font-medium">
-                  🔴 Volumen alto — se notificará a gerente y head
-                </p>
-              )}
-              {volumen && Number(volumen) >= 500 && Number(volumen) < 5000 && (
-                <p className="text-xs text-yellow-600 font-medium">
-                  🟡 Volumen medio — se notificará al gerente
-                </p>
-              )}
+          <div className="space-y-1.5">
+            <Label>Estatus</Label>
+            <Select value={estatus} onValueChange={(v) => setEstatus(v as SitioEstatus)}>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ESTATUS_OPTIONS.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {ESTATUS_LABEL[e]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Volumen estimado</Label>
+            <div className="grid gap-2">
+              {([
+                { value: "bajo", label: "0 – 500 m³", hint: "Sin alerta", tone: "text-muted-foreground" },
+                { value: "medio", label: "500 – 3,500 m³", hint: "🟡 Alerta al jefe de ventas", tone: "text-yellow-600" },
+                { value: "alto", label: "3,500 m³ en adelante", hint: "🔴 Oportunidad estratégica — alerta a Mauricio", tone: "text-red-600" },
+              ] as const).map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-2 rounded-lg border p-2.5 cursor-pointer transition ${
+                    rangoVolumen === opt.value ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="rangoVolumen"
+                    value={opt.value}
+                    checked={rangoVolumen === opt.value}
+                    onChange={() => setRangoVolumen(opt.value)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{opt.label}</div>
+                    <div className={`text-xs ${opt.tone}`}>{opt.hint}</div>
+                  </div>
+                </label>
+              ))}
             </div>
           </div>
 
