@@ -314,6 +314,28 @@ function MapPage() {
             </Button>
           </div>
         )}
+        {placing && nearbyExisting && (
+          <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center justify-between gap-2">
+            <span>
+              ⚠ Sitio a {Math.round(nearbyExisting.d)} m de{" "}
+              {nearbyExisting.sitio.vendedor_id === user?.id
+                ? "ti"
+                : (nearbyExisting.sitio.vendedor?.nombre ??
+                  nearbyExisting.sitio.vendedor?.email ??
+                  "otro vendedor")}
+            </span>
+            <button
+              type="button"
+              className="underline shrink-0"
+              onClick={() => {
+                setSelected(nearbyExisting.sitio);
+                cancelPlacing();
+              }}
+            >
+              Ver
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
