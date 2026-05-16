@@ -139,7 +139,6 @@ function LeadsPage() {
   const totalM3 = filtered.reduce((a, s) => a + (s.volumen_m3 ?? 0), 0);
 
   return (
-    <div className="flex-1 flex flex-col px-4 py-4 w-full min-h-0">
     <div className="flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-4 w-full min-h-0">
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
