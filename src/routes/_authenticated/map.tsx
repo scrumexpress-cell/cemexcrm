@@ -211,7 +211,7 @@ function MapPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col relative">
+    <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
       <div className="px-3 py-2 border-b bg-card space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
