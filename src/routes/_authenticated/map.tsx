@@ -298,7 +298,7 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute bottom-[calc(8.5rem+env(safe-area-inset-bottom))] inset-x-3 z-40 max-h-[32vh] overflow-y-auto bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1 sm:bottom-20 sm:inset-x-4">
+          <div className="absolute bottom-[calc(8.5rem_+_env(safe-area-inset-bottom))] inset-x-3 z-40 max-h-[32vh] overflow-y-auto bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1 sm:bottom-20 sm:inset-x-4">
             <div className="font-medium text-sm">Ubica el nuevo sitio</div>
             <div className="text-muted-foreground">
               Toca el mapa o arrastra el pin para fijar el punto.
@@ -333,14 +333,14 @@ function MapPage() {
           <>
             <button
               onClick={() => locateUser(true)}
-              className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] right-28 z-40 h-12 w-12 rounded-full bg-card border shadow-xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
+              className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-28 z-40 h-12 w-12 rounded-full bg-card border shadow-xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
               aria-label="Mi ubicación"
             >
               <Crosshair className="h-5 w-5" />
             </button>
             <button
               onClick={startPlacing}
-              className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
+              className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-40 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
               aria-label="Nuevo sitio"
             >
               <Plus className="h-8 w-8" strokeWidth={2.5} />
@@ -349,7 +349,7 @@ function MapPage() {
         )}
 
         {placing && (
-          <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-3 z-40 grid grid-cols-[1fr_48px_1fr] gap-2 sm:bottom-4 sm:inset-x-4">
+          <div className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] inset-x-3 z-40 grid grid-cols-[1fr_48px_1fr] gap-2 sm:bottom-4 sm:inset-x-4">
             <Button variant="secondary" className="h-12 min-w-0 shadow-lg" onClick={cancelPlacing}>
               <X className="h-4 w-4 mr-1" /> Cancelar
             </Button>
@@ -384,7 +384,7 @@ function MapPage() {
       </div>
 
       {selected && !placing && (
-        <div className="absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 left-4 sm:bottom-4 sm:left-auto sm:w-[340px] z-40 max-h-[45vh] overflow-y-auto bg-card border rounded-2xl shadow-2xl p-4 animate-in slide-in-from-bottom">
+        <div className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 left-4 sm:bottom-4 sm:left-auto sm:w-[340px] z-40 max-h-[45vh] overflow-y-auto bg-card border rounded-2xl shadow-2xl p-4 animate-in slide-in-from-bottom">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold truncate">
