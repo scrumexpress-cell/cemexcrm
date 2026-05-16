@@ -390,7 +390,7 @@ export function MapView({
 
       <div
         data-map-control
-        className="absolute right-3 top-3 z-30 overflow-hidden rounded-lg border bg-card shadow-lg"
+        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg sm:block"
       >
         <button
           type="button"
