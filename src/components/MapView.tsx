@@ -440,7 +440,7 @@ export function MapView({
         </button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-lg border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur">
+      <div className="pointer-events-none absolute bottom-3 left-3 z-30 hidden rounded-lg border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur sm:block">
         <div className="flex items-center gap-1 font-medium text-foreground">
           <MapIcon className="h-3.5 w-3.5" /> Mapa seguro
         </div>
