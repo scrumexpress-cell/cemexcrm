@@ -64,7 +64,7 @@ function MapPage() {
   const [dupDialogOpen, setDupDialogOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(
-    null,
+    { center: [-103.3496, 20.6597], zoom: 15 },
   );
 
   const locateUser = (showErrors = false) => {
