@@ -67,6 +67,21 @@ function MapPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dupDialogOpen, setDupDialogOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setInitialView({
+          center: [pos.coords.longitude, pos.coords.latitude],
+          zoom: 14,
+        });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
+    );
+  }, []);
 
   async function handleSeed() {
     if (!user) return;
@@ -248,6 +263,8 @@ function MapPage() {
         <MapView
           sitios={filtered}
           currentUserId={user?.id ?? null}
+          center={initialView?.center}
+          zoom={initialView?.zoom}
           onPinClick={(s) => {
             if (placing) return;
             void navigate({ to: "/sitios/$sitioId", params: { sitioId: s.id } });
