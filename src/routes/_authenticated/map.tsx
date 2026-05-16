@@ -301,7 +301,7 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute bottom-20 inset-x-4 z-30 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
+          <div className="absolute bottom-20 inset-x-3 z-30 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1 sm:inset-x-4">
             <div className="font-medium text-sm">Ubica el nuevo sitio</div>
             <div className="text-muted-foreground">
               Toca el mapa o arrastra el pin para fijar el punto.
@@ -352,17 +352,17 @@ function MapPage() {
         )}
 
         {placing && (
-          <div className="absolute bottom-4 inset-x-4 z-30 flex gap-2">
+          <div className="absolute bottom-4 inset-x-3 z-30 grid grid-cols-[1fr_48px_1fr] gap-2 sm:inset-x-4">
             <Button
               variant="secondary"
-              className="flex-1 h-12 shadow-lg"
+              className="h-12 min-w-0 shadow-lg"
               onClick={cancelPlacing}
             >
               <X className="h-4 w-4 mr-1" /> Cancelar
             </Button>
             <Button
               variant="outline"
-              className="h-12 shadow-lg bg-card"
+              className="h-12 w-12 shrink-0 bg-card p-0 shadow-lg"
               onClick={() => {
                 if (!navigator.geolocation) return;
                 navigator.geolocation.getCurrentPosition(
@@ -380,7 +380,7 @@ function MapPage() {
               <Crosshair className="h-4 w-4" />
             </Button>
             <Button
-              className="flex-1 h-12 shadow-lg"
+              className="h-12 min-w-0 shadow-lg"
               onClick={confirmPlacing}
               disabled={!placeCoords}
             >
