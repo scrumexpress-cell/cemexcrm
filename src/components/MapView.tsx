@@ -362,7 +362,6 @@ export function MapView({
           />
         </div>
       </div>
-
     </div>
   );
 }
