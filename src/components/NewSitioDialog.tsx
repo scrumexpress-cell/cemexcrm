@@ -131,7 +131,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
       nombre_referencia: nombre || null,
       direccion: direccion || null,
       estatus,
-      volumen_m3: volumen ? Number(volumen) : null,
+      volumen_m3: rangoVolumen === "alto" ? 5000 : rangoVolumen === "medio" ? 1000 : 100,
       vendedor_id: user.id,
       zona_id: profile?.zona_id ?? null,
       notas: notas || null,
