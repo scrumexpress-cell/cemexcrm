@@ -61,6 +61,8 @@ function LeadsPage() {
   const [filterPrioridad, setFilterPrioridad] = useState("todos");
   const [filterSeguimiento, setFilterSeguimiento] = useState("todos");
   const [search, setSearch] = useState("");
+  const [mobileEtapa, setMobileEtapa] = useState<SitioEtapa>("registro_inicial");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     void load();
