@@ -114,7 +114,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     setNombre("");
     setDireccion("");
     setEstatus("prospecto");
-    setVolumen("");
+    setRangoVolumen("bajo");
     setNotas("");
     setPhoto(null);
     setCercanos([]);
