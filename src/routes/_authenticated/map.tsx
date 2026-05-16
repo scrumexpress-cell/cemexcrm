@@ -263,6 +263,8 @@ function MapPage() {
         <MapView
           sitios={filtered}
           currentUserId={user?.id ?? null}
+          center={initialView?.center}
+          zoom={initialView?.zoom}
           onPinClick={(s) => {
             if (placing) return;
             void navigate({ to: "/sitios/$sitioId", params: { sitioId: s.id } });
