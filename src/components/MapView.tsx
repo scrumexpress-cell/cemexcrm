@@ -203,13 +203,20 @@ export function MapView({
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ touchAction: "none" }}
+      style={{
+        touchAction: "none",
+        WebkitTapHighlightColor: "transparent",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
       onWheel={(e) => {
         e.preventDefault();
         zoomAt(view.zoom + (e.deltaY > 0 ? -1 : 1), e.clientX, e.clientY);
       }}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
+        // Si hay pinch activo (multi-touch), no arrastrar
+        if (pinchRef.current) return;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         const world = lngLatToWorld(view.lng, view.lat, z);
         draggingRef.current = {
@@ -224,6 +231,7 @@ export function MapView({
       onPointerMove={(e) => {
         const drag = draggingRef.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
+        if (pinchRef.current) return;
         const dx = e.clientX - drag.startX;
         const dy = e.clientY - drag.startY;
         if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
@@ -234,13 +242,19 @@ export function MapView({
         const drag = draggingRef.current;
         draggingRef.current = null;
         if (drag?.pointerId !== e.pointerId) return;
+        if (pinchRef.current) return;
         if (!drag.moved) {
           const ll = clientToLngLat(e.clientX, e.clientY);
           if (ll) onMapClick?.(ll.lng, ll.lat);
         }
       }}
+      onPointerCancel={() => {
+        draggingRef.current = null;
+      }}
       onTouchStart={(e) => {
-        if (e.touches.length === 2) {
+        if (e.touches.length >= 2) {
+          // Cancelar cualquier arrastre en curso al iniciar pinch
+          draggingRef.current = null;
           const [a, b] = Array.from(e.touches);
           pinchRef.current = {
             distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
@@ -249,19 +263,26 @@ export function MapView({
         }
       }}
       onTouchMove={(e) => {
-        if (e.touches.length !== 2 || !pinchRef.current) return;
+        if (e.touches.length < 2 || !pinchRef.current) return;
+        e.preventDefault();
         const [a, b] = Array.from(e.touches);
         const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
         if (!pinchRef.current.distance) return;
         const delta = Math.log2(distance / pinchRef.current.distance);
-        zoomAt(
-          Math.round(pinchRef.current.zoom + delta),
-          (a.clientX + b.clientX) / 2,
-          (a.clientY + b.clientY) / 2,
-        );
+        const nextZoom = clamp(pinchRef.current.zoom + delta, MIN_ZOOM, MAX_ZOOM);
+        const nextRounded = Math.round(nextZoom);
+        if (nextRounded !== Math.round(view.zoom)) {
+          zoomAt(nextRounded, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+          pinchRef.current = {
+            distance,
+            zoom: nextRounded,
+          };
+        }
       }}
-      onTouchEnd={() => {
-        pinchRef.current = null;
+      onTouchEnd={(e) => {
+        if (e.touches.length < 2) {
+          pinchRef.current = null;
+        }
       }}
     >
       <div className="absolute inset-0">
