@@ -103,6 +103,53 @@ export function MapView({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const eventTouchesMap = (event: TouchEvent) => {
+      if (event.composedPath().includes(container)) return true;
+      const rect = container.getBoundingClientRect();
+      return Array.from(event.touches).some(
+        (touch) =>
+          touch.clientX >= rect.left &&
+          touch.clientX <= rect.right &&
+          touch.clientY >= rect.top &&
+          touch.clientY <= rect.bottom,
+      );
+    };
+
+    const stopMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length <= 1 || !eventTouchesMap(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activeTouchPointersRef.current.clear();
+      draggingRef.current = null;
+    };
+
+    const stopGesture = (event: Event) => {
+      if (!event.composedPath().includes(container)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activeTouchPointersRef.current.clear();
+      draggingRef.current = null;
+    };
+
+    document.addEventListener("touchstart", stopMultiTouch, { passive: false, capture: true });
+    document.addEventListener("touchmove", stopMultiTouch, { passive: false, capture: true });
+    window.addEventListener("gesturestart", stopGesture, { passive: false, capture: true });
+    window.addEventListener("gesturechange", stopGesture, { passive: false, capture: true });
+    window.addEventListener("gestureend", stopGesture, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener("touchstart", stopMultiTouch, { capture: true });
+      document.removeEventListener("touchmove", stopMultiTouch, { capture: true });
+      window.removeEventListener("gesturestart", stopGesture, { capture: true });
+      window.removeEventListener("gesturechange", stopGesture, { capture: true });
+      window.removeEventListener("gestureend", stopGesture, { capture: true });
+    };
+  }, []);
+
   // No recentrar automáticamente al cambiar el marcador: provoca que el mapa
   // "salte" cuando el usuario hace tap para ubicar la oportunidad.
 
@@ -178,6 +225,7 @@ export function MapView({
         .join(" ")}
       style={{
         touchAction: "none",
+        overscrollBehavior: "none",
         WebkitTapHighlightColor: "transparent",
         WebkitUserSelect: "none",
         userSelect: "none",
@@ -186,6 +234,7 @@ export function MapView({
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
         if (e.pointerType === "touch") {
+          e.preventDefault();
           activeTouchPointersRef.current.add(e.pointerId);
           if (activeTouchPointersRef.current.size > 1) {
             draggingRef.current = null;
