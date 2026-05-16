@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
-import { Factory, Flame, Map as MapIcon, MapPin, Mountain, Navigation } from "lucide-react";
+import { Factory, Flame, MapPin, Mountain } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
@@ -79,7 +79,7 @@ export function MapView({
     moved: boolean;
   } | null>(null);
   const dragMarkerRef = useRef(false);
-  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const activeTouchPointersRef = useRef(new Set<number>());
 
   const [styleKey, setStyleKey] = useState<StyleKey>("streets");
   const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
@@ -215,8 +215,13 @@ export function MapView({
       }}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
-        // Si hay pinch activo (multi-touch), no arrastrar
-        if (pinchRef.current) return;
+        if (e.pointerType === "touch") {
+          activeTouchPointersRef.current.add(e.pointerId);
+          if (activeTouchPointersRef.current.size > 1) {
+            draggingRef.current = null;
+            return;
+          }
+        }
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         const world = lngLatToWorld(view.lng, view.lat, z);
         draggingRef.current = {
@@ -231,7 +236,7 @@ export function MapView({
       onPointerMove={(e) => {
         const drag = draggingRef.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
-        if (pinchRef.current) return;
+        if (e.pointerType === "touch" && activeTouchPointersRef.current.size > 1) return;
         const dx = e.clientX - drag.startX;
         const dy = e.clientY - drag.startY;
         if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
@@ -240,20 +245,20 @@ export function MapView({
       }}
       onPointerUp={(e) => {
         const drag = draggingRef.current;
+        if (e.pointerType === "touch") activeTouchPointersRef.current.delete(e.pointerId);
         draggingRef.current = null;
         if (drag?.pointerId !== e.pointerId) return;
-        if (pinchRef.current) return;
         if (!drag.moved) {
           const ll = clientToLngLat(e.clientX, e.clientY);
           if (ll) onMapClick?.(ll.lng, ll.lat);
         }
       }}
       onPointerCancel={() => {
+        activeTouchPointersRef.current.clear();
         draggingRef.current = null;
       }}
       onTouchStart={() => {
         // Pinch-to-zoom deshabilitado en móvil: causaba que el mapa se trabara.
-        pinchRef.current = null;
       }}
     >
       <div className="absolute inset-0">
@@ -390,7 +395,7 @@ export function MapView({
 
       <div
         data-map-control
-        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg sm:block"
+        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg md:block"
       >
         <button
           type="button"
@@ -411,14 +416,6 @@ export function MapView({
         </button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-3 left-3 z-30 hidden rounded-lg border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur sm:block">
-        <div className="flex items-center gap-1 font-medium text-foreground">
-          <MapIcon className="h-3.5 w-3.5" /> Mapa seguro
-        </div>
-        <div className="mt-0.5 flex items-center gap-1">
-          <Navigation className="h-3 w-3" /> Arrastra, pellizca o toca para crear
-        </div>
-      </div>
     </div>
   );
 }
