@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/select";
 import {
   supabase,
+  type Profile,
   type SitioCercano,
   type SitioEstatus,
+  type TareaTipo,
 } from "@/integrations/supabase/client";
 import { ESTATUS_LABEL, ESTATUS_OPTIONS } from "@/lib/sitio-utils";
 import { plantaMasCercana } from "@/lib/geo";
@@ -51,6 +53,25 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   const [loadingAddr, setLoadingAddr] = useState(false);
   const [cercanos, setCercanos] = useState<SitioCercano[]>([]);
   const [checkingDup, setCheckingDup] = useState(false);
+
+  // Tarea inicial (obligatoria)
+  const TAREA_TIPOS: { value: TareaTipo; label: string }[] = [
+    { value: "llamada", label: "Llamada" },
+    { value: "visita", label: "Visita" },
+    { value: "cotizacion", label: "Cotización" },
+    { value: "seguimiento", label: "Seguimiento" },
+    { value: "muestra", label: "Muestra" },
+    { value: "otro", label: "Otro" },
+  ];
+  const [tareaTipo, setTareaTipo] = useState<TareaTipo>("visita");
+  const [tareaTitulo, setTareaTitulo] = useState("");
+  const [tareaFecha, setTareaFecha] = useState(() => {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    return t.toISOString().slice(0, 10);
+  });
+  const [tareaAsignado, setTareaAsignado] = useState<string>("");
+  const [asignables, setAsignables] = useState<Profile[]>([]);
 
   // Planta CEMEX más cercana (geocerca automática)
   const plantaCercana = coords ? plantaMasCercana(coords) : null;
@@ -110,6 +131,20 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     };
   }, [open, coords?.lat, coords?.lng]);
 
+  // Cargar usuarios asignables y default = logueado
+  useEffect(() => {
+    if (!open || !user) return;
+    setTareaAsignado((prev) => prev || user.id);
+    void supabase
+      .from("profiles")
+      .select("*")
+      .in("role", ["vendedor", "gerente", "head"])
+      .order("nombre", { ascending: true })
+      .then(({ data }) => {
+        setAsignables((data as Profile[]) ?? []);
+      });
+  }, [open, user?.id]);
+
   function reset() {
     setNombre("");
     setDireccion("");
@@ -118,11 +153,29 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     setNotas("");
     setPhoto(null);
     setCercanos([]);
+    setTareaTipo("visita");
+    setTareaTitulo("");
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    setTareaFecha(t.toISOString().slice(0, 10));
+    setTareaAsignado(user?.id ?? "");
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!coords || !user) return;
+    if (!tareaTitulo.trim()) {
+      toast.error("Pon un título a la tarea inicial");
+      return;
+    }
+    if (!tareaFecha) {
+      toast.error("Elige la fecha de la tarea inicial");
+      return;
+    }
+    if (!tareaAsignado) {
+      toast.error("Elige a quién se le asigna la tarea inicial");
+      return;
+    }
     setSubmitting(true);
 
     const payload = {
@@ -180,8 +233,21 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
       }
     }
 
+    // Tarea inicial obligatoria
+    const { error: tareaErr } = await supabase.from("tareas").insert({
+      sitio_id: sitio.id,
+      vendedor_id: tareaAsignado,
+      creada_por: user.id,
+      tipo: tareaTipo,
+      titulo: tareaTitulo.trim(),
+      fecha_objetivo: tareaFecha,
+    });
+    if (tareaErr) {
+      toast.error(`Sitio creado, pero falló la tarea: ${tareaErr.message}`);
+    }
+
     setSubmitting(false);
-    toast.success("Sitio creado");
+    toast.success("Sitio y tarea inicial creados");
     reset();
     onCreated();
   }
@@ -353,6 +419,73 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
                 onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
               />
             </label>
+          </div>
+
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+            <div className="text-sm font-semibold">Tarea inicial</div>
+            <p className="text-[11px] text-muted-foreground -mt-2">
+              Define el siguiente paso para no perder esta oportunidad.
+            </p>
+
+            <div className="space-y-1.5">
+              <Label>Título</Label>
+              <Input
+                value={tareaTitulo}
+                onChange={(e) => setTareaTitulo(e.target.value)}
+                placeholder="Ej. Visitar obra y validar volumen"
+                className="h-10"
+                maxLength={120}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={tareaTipo} onValueChange={(v) => setTareaTipo(v as TareaTipo)}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TAREA_TIPOS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Fecha</Label>
+                <Input
+                  type="date"
+                  value={tareaFecha}
+                  onChange={(e) => setTareaFecha(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Asignar a</Label>
+              <Select value={tareaAsignado} onValueChange={setTareaAsignado}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Elige a un responsable" />
+                </SelectTrigger>
+                <SelectContent>
+                  {user && !asignables.some((a) => a.id === user.id) && (
+                    <SelectItem value={user.id}>
+                      {profile?.nombre ?? profile?.email ?? "Yo"} (yo)
+                    </SelectItem>
+                  )}
+                  {asignables.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {(p.nombre ?? p.email ?? "Sin nombre")}
+                      {p.id === user?.id ? " (yo)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-2 pt-2">
