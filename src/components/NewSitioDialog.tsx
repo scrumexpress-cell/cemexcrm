@@ -233,8 +233,21 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
       }
     }
 
+    // Tarea inicial obligatoria
+    const { error: tareaErr } = await supabase.from("tareas").insert({
+      sitio_id: sitio.id,
+      vendedor_id: tareaAsignado,
+      creada_por: user.id,
+      tipo: tareaTipo,
+      titulo: tareaTitulo.trim(),
+      fecha_objetivo: tareaFecha,
+    });
+    if (tareaErr) {
+      toast.error(`Sitio creado, pero falló la tarea: ${tareaErr.message}`);
+    }
+
     setSubmitting(false);
-    toast.success("Sitio creado");
+    toast.success("Sitio y tarea inicial creados");
     reset();
     onCreated();
   }
