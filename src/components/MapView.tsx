@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { getMapboxToken } from "@/lib/mapbox-token";
 import { ESTATUS_COLOR, ESTATUS_LABEL, ESTATUS_ICON } from "@/lib/sitio-utils";
 import { PLANTAS_CEMEX } from "@/lib/cemex-plantas";
-import { Factory, Flame, Map as MapIcon, MapPin, Mountain, Navigation } from "lucide-react";
+import { Factory, Flame, MapPin, Mountain } from "lucide-react";
 import type { Sitio } from "@/integrations/supabase/client";
 
 export type MapSitio = Sitio & {
@@ -79,7 +79,7 @@ export function MapView({
     moved: boolean;
   } | null>(null);
   const dragMarkerRef = useRef(false);
-  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const activeTouchPointersRef = useRef(new Set<number>());
 
   const [styleKey, setStyleKey] = useState<StyleKey>("streets");
   const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
@@ -163,33 +163,6 @@ export function MapView({
     return worldToLngLat(worldX, worldY, z);
   }
 
-  function zoomAt(nextZoom: number, clientX?: number, clientY?: number) {
-    setView((prev) => {
-      const next = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
-      if (next === Math.round(prev.zoom)) return prev;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect || clientX == null || clientY == null) return { ...prev, zoom: next };
-
-      const beforeCenter = lngLatToWorld(prev.lng, prev.lat, Math.round(prev.zoom));
-      const focusWorldBefore = {
-        x: beforeCenter.x + (clientX - rect.left - rect.width / 2),
-        y: beforeCenter.y + (clientY - rect.top - rect.height / 2),
-      };
-      const focusLngLat = worldToLngLat(
-        focusWorldBefore.x,
-        focusWorldBefore.y,
-        Math.round(prev.zoom),
-      );
-      const focusWorldAfter = lngLatToWorld(focusLngLat.lng, focusLngLat.lat, next);
-      const nextCenterWorld = {
-        x: focusWorldAfter.x - (clientX - rect.left - rect.width / 2),
-        y: focusWorldAfter.y - (clientY - rect.top - rect.height / 2),
-      };
-      const nextCenter = worldToLngLat(nextCenterWorld.x, nextCenterWorld.y, next);
-      return { lng: nextCenter.lng, lat: nextCenter.lat, zoom: next };
-    });
-  }
-
   if (!token) {
     return <MapboxTokenPrompt />;
   }
@@ -209,14 +182,16 @@ export function MapView({
         WebkitUserSelect: "none",
         userSelect: "none",
       }}
-      onWheel={(e) => {
-        e.preventDefault();
-        zoomAt(view.zoom + (e.deltaY > 0 ? -1 : 1), e.clientX, e.clientY);
-      }}
+      onWheel={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
-        // Si hay pinch activo (multi-touch), no arrastrar
-        if (pinchRef.current) return;
+        if (e.pointerType === "touch") {
+          activeTouchPointersRef.current.add(e.pointerId);
+          if (activeTouchPointersRef.current.size > 1) {
+            draggingRef.current = null;
+            return;
+          }
+        }
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         const world = lngLatToWorld(view.lng, view.lat, z);
         draggingRef.current = {
@@ -231,7 +206,7 @@ export function MapView({
       onPointerMove={(e) => {
         const drag = draggingRef.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
-        if (pinchRef.current) return;
+        if (e.pointerType === "touch" && activeTouchPointersRef.current.size > 1) return;
         const dx = e.clientX - drag.startX;
         const dy = e.clientY - drag.startY;
         if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
@@ -240,20 +215,20 @@ export function MapView({
       }}
       onPointerUp={(e) => {
         const drag = draggingRef.current;
+        if (e.pointerType === "touch") activeTouchPointersRef.current.delete(e.pointerId);
         draggingRef.current = null;
         if (drag?.pointerId !== e.pointerId) return;
-        if (pinchRef.current) return;
         if (!drag.moved) {
           const ll = clientToLngLat(e.clientX, e.clientY);
           if (ll) onMapClick?.(ll.lng, ll.lat);
         }
       }}
       onPointerCancel={() => {
+        activeTouchPointersRef.current.clear();
         draggingRef.current = null;
       }}
       onTouchStart={() => {
         // Pinch-to-zoom deshabilitado en móvil: causaba que el mapa se trabara.
-        pinchRef.current = null;
       }}
     >
       <div className="absolute inset-0">
@@ -385,38 +360,6 @@ export function MapView({
             icon={<Flame className="h-3.5 w-3.5" />}
             label="Calor"
           />
-        </div>
-      </div>
-
-      <div
-        data-map-control
-        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg sm:block"
-      >
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
-          onClick={() => zoomAt(view.zoom + 1)}
-          aria-label="Acercar"
-        >
-          +
-        </button>
-        <div className="h-px bg-border" />
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
-          onClick={() => zoomAt(view.zoom - 1)}
-          aria-label="Alejar"
-        >
-          −
-        </button>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-3 left-3 z-30 hidden rounded-lg border bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur sm:block">
-        <div className="flex items-center gap-1 font-medium text-foreground">
-          <MapIcon className="h-3.5 w-3.5" /> Mapa seguro
-        </div>
-        <div className="mt-0.5 flex items-center gap-1">
-          <Navigation className="h-3 w-3" /> Arrastra, pellizca o toca para crear
         </div>
       </div>
     </div>
