@@ -267,10 +267,53 @@ function MapPage() {
               {seeding ? "Cargando..." : "10 ejemplos"}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+            onClick={() => locateUser(true)}
+            aria-label="Mi ubicación"
+          >
+            <Crosshair className="h-4 w-4 mr-1" />
+            Ubicarme
+          </Button>
           <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
             {loading ? "..." : `${filtered.length} sitios`}
           </div>
         </div>
+        {placing && (
+          <div className="grid grid-cols-[1fr_48px_1fr] gap-2">
+            <Button variant="secondary" className="h-10 min-w-0" onClick={cancelPlacing}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 w-12 shrink-0 bg-card p-0"
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition(
+                  (pos) =>
+                    setPlaceCoords({
+                      lng: pos.coords.longitude,
+                      lat: pos.coords.latitude,
+                    }),
+                  (err) => toast.error(`GPS: ${err.message}`),
+                  { enableHighAccuracy: true, timeout: 10000 },
+                );
+              }}
+              aria-label="Usar mi ubicación"
+            >
+              <Crosshair className="h-4 w-4" />
+            </Button>
+            <Button
+              className="h-10 min-w-0"
+              onClick={confirmPlacing}
+              disabled={!placeCoords}
+            >
+              <Check className="h-4 w-4 mr-1" /> Continuar
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
