@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/select";
 import {
   supabase,
+  type Profile,
   type SitioCercano,
   type SitioEstatus,
+  type TareaTipo,
 } from "@/integrations/supabase/client";
 import { ESTATUS_LABEL, ESTATUS_OPTIONS } from "@/lib/sitio-utils";
 import { plantaMasCercana } from "@/lib/geo";
