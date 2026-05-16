@@ -251,38 +251,9 @@ export function MapView({
       onPointerCancel={() => {
         draggingRef.current = null;
       }}
-      onTouchStart={(e) => {
-        if (e.touches.length >= 2) {
-          // Cancelar cualquier arrastre en curso al iniciar pinch
-          draggingRef.current = null;
-          const [a, b] = Array.from(e.touches);
-          pinchRef.current = {
-            distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
-            zoom: view.zoom,
-          };
-        }
-      }}
-      onTouchMove={(e) => {
-        if (e.touches.length < 2 || !pinchRef.current) return;
-        e.preventDefault();
-        const [a, b] = Array.from(e.touches);
-        const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        if (!pinchRef.current.distance) return;
-        const delta = Math.log2(distance / pinchRef.current.distance);
-        const nextZoom = clamp(pinchRef.current.zoom + delta, MIN_ZOOM, MAX_ZOOM);
-        const nextRounded = Math.round(nextZoom);
-        if (nextRounded !== Math.round(view.zoom)) {
-          zoomAt(nextRounded, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
-          pinchRef.current = {
-            distance,
-            zoom: nextRounded,
-          };
-        }
-      }}
-      onTouchEnd={(e) => {
-        if (e.touches.length < 2) {
-          pinchRef.current = null;
-        }
+      onTouchStart={() => {
+        // Pinch-to-zoom deshabilitado en móvil: causaba que el mapa se trabara.
+        pinchRef.current = null;
       }}
     >
       <div className="absolute inset-0">
@@ -419,7 +390,7 @@ export function MapView({
 
       <div
         data-map-control
-        className="absolute right-3 top-3 z-30 overflow-hidden rounded-lg border bg-card shadow-lg"
+        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg sm:block"
       >
         <button
           type="button"
