@@ -44,7 +44,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
   const [estatus, setEstatus] = useState<SitioEstatus>("prospecto");
-  const [volumen, setVolumen] = useState("");
+  const [rangoVolumen, setRangoVolumen] = useState<"bajo" | "medio" | "alto">("bajo");
   const [notas, setNotas] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
