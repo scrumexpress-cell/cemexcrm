@@ -373,44 +373,6 @@ export function MapView({
         />
       )}
 
-      <div data-map-control className="absolute left-3 top-3 z-30 flex flex-col gap-2">
-        <div className="flex rounded-lg border bg-card p-1 shadow-lg">
-          {(["streets", "satellite", "outdoors", "dark"] as StyleKey[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setStyleKey(k)}
-              className={`rounded px-2 py-1 text-xs font-medium transition ${
-                styleKey === k
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground hover:bg-muted"
-              }`}
-            >
-              {k === "streets"
-                ? "Calles"
-                : k === "satellite"
-                  ? "Satélite"
-                  : k === "outdoors"
-                    ? "Relieve"
-                    : "Oscuro"}
-            </button>
-          ))}
-        </div>
-        <div className="flex rounded-lg border bg-card p-1 shadow-lg">
-          <ToggleBtn
-            active={showPlants}
-            onClick={() => setShowPlants((v) => !v)}
-            icon={<Factory className="h-3.5 w-3.5" />}
-            label="Plantas"
-          />
-          <ToggleBtn
-            active={showHeat}
-            onClick={() => setShowHeat((v) => !v)}
-            icon={<Flame className="h-3.5 w-3.5" />}
-            label="Calor"
-          />
-        </div>
-      </div>
     </div>
   );
 }
