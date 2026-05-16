@@ -103,6 +103,40 @@ export function MapView({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const stopMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length <= 1) return;
+      event.preventDefault();
+      event.stopPropagation();
+      activeTouchPointersRef.current.clear();
+      draggingRef.current = null;
+    };
+
+    const stopGesture = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      activeTouchPointersRef.current.clear();
+      draggingRef.current = null;
+    };
+
+    container.addEventListener("touchstart", stopMultiTouch, { passive: false, capture: true });
+    container.addEventListener("touchmove", stopMultiTouch, { passive: false, capture: true });
+    container.addEventListener("gesturestart", stopGesture, { passive: false, capture: true });
+    container.addEventListener("gesturechange", stopGesture, { passive: false, capture: true });
+    container.addEventListener("gestureend", stopGesture, { passive: false, capture: true });
+
+    return () => {
+      container.removeEventListener("touchstart", stopMultiTouch, { capture: true });
+      container.removeEventListener("touchmove", stopMultiTouch, { capture: true });
+      container.removeEventListener("gesturestart", stopGesture, { capture: true });
+      container.removeEventListener("gesturechange", stopGesture, { capture: true });
+      container.removeEventListener("gestureend", stopGesture, { capture: true });
+    };
+  }, []);
+
   // No recentrar automáticamente al cambiar el marcador: provoca que el mapa
   // "salte" cuando el usuario hace tap para ubicar la oportunidad.
 
@@ -178,6 +212,7 @@ export function MapView({
         .join(" ")}
       style={{
         touchAction: "none",
+        overscrollBehavior: "none",
         WebkitTapHighlightColor: "transparent",
         WebkitUserSelect: "none",
         userSelect: "none",
@@ -186,6 +221,7 @@ export function MapView({
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
         if (e.pointerType === "touch") {
+          e.preventDefault();
           activeTouchPointersRef.current.add(e.pointerId);
           if (activeTouchPointersRef.current.size > 1) {
             draggingRef.current = null;
