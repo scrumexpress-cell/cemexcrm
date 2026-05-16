@@ -131,6 +131,20 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     };
   }, [open, coords?.lat, coords?.lng]);
 
+  // Cargar usuarios asignables y default = logueado
+  useEffect(() => {
+    if (!open || !user) return;
+    setTareaAsignado((prev) => prev || user.id);
+    void supabase
+      .from("profiles")
+      .select("*")
+      .in("role", ["vendedor", "gerente", "head"])
+      .order("nombre", { ascending: true })
+      .then(({ data }) => {
+        setAsignables((data as Profile[]) ?? []);
+      });
+  }, [open, user?.id]);
+
   function reset() {
     setNombre("");
     setDireccion("");
@@ -139,27 +153,30 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     setNotas("");
     setPhoto(null);
     setCercanos([]);
+    setTareaTipo("visita");
+    setTareaTitulo("");
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    setTareaFecha(t.toISOString().slice(0, 10));
+    setTareaAsignado(user?.id ?? "");
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!coords || !user) return;
+    if (!tareaTitulo.trim()) {
+      toast.error("Pon un título a la tarea inicial");
+      return;
+    }
+    if (!tareaFecha) {
+      toast.error("Elige la fecha de la tarea inicial");
+      return;
+    }
+    if (!tareaAsignado) {
+      toast.error("Elige a quién se le asigna la tarea inicial");
+      return;
+    }
     setSubmitting(true);
-
-    const payload = {
-      lat: coords.lat,
-      lng: coords.lng,
-      nombre_referencia: nombre || null,
-      direccion: direccion || null,
-      estatus,
-      volumen_m3: rangoVolumen === "alto" ? 5000 : rangoVolumen === "medio" ? 1000 : 100,
-      vendedor_id: user.id,
-      zona_id: profile?.zona_id ?? null,
-      notas: notas || null,
-    };
-
-    // Modo offline: encolar para sincronizar después
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
       await enqueueSitio(payload);
       setSubmitting(false);
       toast.success("Sin conexión: el sitio se guardó local y se sincronizará después");
