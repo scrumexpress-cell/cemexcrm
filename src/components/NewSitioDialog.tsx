@@ -177,6 +177,21 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
       return;
     }
     setSubmitting(true);
+
+    const payload = {
+      lat: coords.lat,
+      lng: coords.lng,
+      nombre_referencia: nombre || null,
+      direccion: direccion || null,
+      estatus,
+      volumen_m3: rangoVolumen === "alto" ? 5000 : rangoVolumen === "medio" ? 1000 : 100,
+      vendedor_id: user.id,
+      zona_id: profile?.zona_id ?? null,
+      notas: notas || null,
+    };
+
+    // Modo offline: encolar para sincronizar después
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
       await enqueueSitio(payload);
       setSubmitting(false);
       toast.success("Sin conexión: el sitio se guardó local y se sincronizará después");
