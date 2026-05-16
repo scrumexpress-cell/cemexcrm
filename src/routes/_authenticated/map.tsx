@@ -276,7 +276,7 @@ function MapPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-[360px] relative overflow-hidden">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         <MapView
           sitios={filtered}
           currentUserId={user?.id ?? null}
