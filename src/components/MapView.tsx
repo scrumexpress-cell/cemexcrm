@@ -163,33 +163,6 @@ export function MapView({
     return worldToLngLat(worldX, worldY, z);
   }
 
-  function zoomAt(nextZoom: number, clientX?: number, clientY?: number) {
-    setView((prev) => {
-      const next = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
-      if (next === Math.round(prev.zoom)) return prev;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect || clientX == null || clientY == null) return { ...prev, zoom: next };
-
-      const beforeCenter = lngLatToWorld(prev.lng, prev.lat, Math.round(prev.zoom));
-      const focusWorldBefore = {
-        x: beforeCenter.x + (clientX - rect.left - rect.width / 2),
-        y: beforeCenter.y + (clientY - rect.top - rect.height / 2),
-      };
-      const focusLngLat = worldToLngLat(
-        focusWorldBefore.x,
-        focusWorldBefore.y,
-        Math.round(prev.zoom),
-      );
-      const focusWorldAfter = lngLatToWorld(focusLngLat.lng, focusLngLat.lat, next);
-      const nextCenterWorld = {
-        x: focusWorldAfter.x - (clientX - rect.left - rect.width / 2),
-        y: focusWorldAfter.y - (clientY - rect.top - rect.height / 2),
-      };
-      const nextCenter = worldToLngLat(nextCenterWorld.x, nextCenterWorld.y, next);
-      return { lng: nextCenter.lng, lat: nextCenter.lat, zoom: next };
-    });
-  }
-
   if (!token) {
     return <MapboxTokenPrompt />;
   }
@@ -209,10 +182,7 @@ export function MapView({
         WebkitUserSelect: "none",
         userSelect: "none",
       }}
-      onWheel={(e) => {
-        e.preventDefault();
-        zoomAt(view.zoom + (e.deltaY > 0 ? -1 : 1), e.clientX, e.clientY);
-      }}
+      onWheel={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("[data-map-control],[data-map-marker]")) return;
         if (e.pointerType === "touch") {
@@ -393,28 +363,6 @@ export function MapView({
         </div>
       </div>
 
-      <div
-        data-map-control
-        className="absolute right-3 top-3 z-30 hidden overflow-hidden rounded-lg border bg-card shadow-lg md:block"
-      >
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
-          onClick={() => zoomAt(view.zoom + 1)}
-          aria-label="Acercar"
-        >
-          +
-        </button>
-        <div className="h-px bg-border" />
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center hover:bg-muted"
-          onClick={() => zoomAt(view.zoom - 1)}
-          aria-label="Alejar"
-        >
-          −
-        </button>
-      </div>
     </div>
   );
 }
