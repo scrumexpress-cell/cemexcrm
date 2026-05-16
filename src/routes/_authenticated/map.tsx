@@ -211,7 +211,7 @@ function MapPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col relative">
+    <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
       <div className="px-3 py-2 border-b bg-card space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -276,7 +276,7 @@ function MapPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-[360px] relative overflow-hidden">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         <MapView
           sitios={filtered}
           currentUserId={user?.id ?? null}
@@ -301,7 +301,7 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute bottom-24 inset-x-4 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
+          <div className="absolute bottom-20 inset-x-4 z-30 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
             <div className="font-medium text-sm">Ubica el nuevo sitio</div>
             <div className="text-muted-foreground">
               Toca el mapa o arrastra el pin para fijar el punto.
@@ -336,14 +336,14 @@ function MapPage() {
           <>
             <button
               onClick={() => locateUser(true)}
-              className="absolute bottom-6 right-28 h-12 w-12 rounded-full bg-card border shadow-xl flex items-center justify-center active:scale-95 transition-transform"
+              className="absolute bottom-4 right-28 z-30 h-12 w-12 rounded-full bg-card border shadow-xl flex items-center justify-center active:scale-95 transition-transform"
               aria-label="Mi ubicación"
             >
               <Crosshair className="h-5 w-5" />
             </button>
             <button
               onClick={startPlacing}
-              className="absolute bottom-6 right-6 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
+              className="absolute bottom-4 right-4 z-30 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
               aria-label="Nuevo sitio"
             >
               <Plus className="h-8 w-8" strokeWidth={2.5} />
@@ -352,7 +352,7 @@ function MapPage() {
         )}
 
         {placing && (
-          <div className="absolute bottom-6 inset-x-4 z-10 flex gap-2">
+          <div className="absolute bottom-4 inset-x-4 z-30 flex gap-2">
             <Button
               variant="secondary"
               className="flex-1 h-12 shadow-lg"
