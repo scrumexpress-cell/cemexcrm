@@ -88,8 +88,8 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center[0], center[1], zoom]);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [showHeat, setShowHeat] = useState(false);
-  const [showPlants, setShowPlants] = useState(true);
+  const [showHeat] = useState(false);
+  const [showPlants] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
