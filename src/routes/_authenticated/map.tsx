@@ -267,10 +267,75 @@ function MapPage() {
               {seeding ? "Cargando..." : "10 ejemplos"}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+            onClick={() => locateUser(true)}
+            aria-label="Mi ubicación"
+          >
+            <Crosshair className="h-4 w-4 mr-1" />
+            Ubicarme
+          </Button>
           <div className="ml-auto shrink-0 self-center text-xs text-muted-foreground">
             {loading ? "..." : `${filtered.length} sitios`}
           </div>
         </div>
+        {placing && (
+          <div className="grid grid-cols-[1fr_48px_1fr] gap-2">
+            <Button variant="secondary" className="h-10 min-w-0" onClick={cancelPlacing}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 w-12 shrink-0 bg-card p-0"
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition(
+                  (pos) =>
+                    setPlaceCoords({
+                      lng: pos.coords.longitude,
+                      lat: pos.coords.latitude,
+                    }),
+                  (err) => toast.error(`GPS: ${err.message}`),
+                  { enableHighAccuracy: true, timeout: 10000 },
+                );
+              }}
+              aria-label="Usar mi ubicación"
+            >
+              <Crosshair className="h-4 w-4" />
+            </Button>
+            <Button
+              className="h-10 min-w-0"
+              onClick={confirmPlacing}
+              disabled={!placeCoords}
+            >
+              <Check className="h-4 w-4 mr-1" /> Continuar
+            </Button>
+          </div>
+        )}
+        {placing && nearbyExisting && (
+          <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center justify-between gap-2">
+            <span>
+              ⚠ Sitio a {Math.round(nearbyExisting.d)} m de{" "}
+              {nearbyExisting.sitio.vendedor_id === user?.id
+                ? "ti"
+                : (nearbyExisting.sitio.vendedor?.nombre ??
+                  nearbyExisting.sitio.vendedor?.email ??
+                  "otro vendedor")}
+            </span>
+            <button
+              type="button"
+              className="underline shrink-0"
+              onClick={() => {
+                setSelected(nearbyExisting.sitio);
+                cancelPlacing();
+              }}
+            >
+              Ver
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
@@ -297,89 +362,14 @@ function MapPage() {
           className="absolute inset-0 h-full w-full"
         />
 
-        {placing && (
-          <div className="absolute bottom-[calc(8.5rem_+_env(safe-area-inset-bottom))] inset-x-3 z-40 max-h-[32vh] overflow-y-auto bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1 sm:bottom-20 sm:inset-x-4">
-            <div className="font-medium text-sm">Ubica el nuevo sitio</div>
-            <div className="text-muted-foreground">
-              Toca el mapa o arrastra el pin para fijar el punto.
-            </div>
-            {nearbyExisting && (
-              <div className="text-amber-700 dark:text-amber-400 font-medium space-y-1 pt-1">
-                <div>
-                  ⚠ Hay un sitio a {Math.round(nearbyExisting.d)} m de{" "}
-                  {nearbyExisting.sitio.vendedor_id === user?.id
-                    ? "ti"
-                    : (nearbyExisting.sitio.vendedor?.nombre ??
-                      nearbyExisting.sitio.vendedor?.email ??
-                      "otro vendedor")}
-                  . Verifica que no sea el mismo lead.
-                </div>
-                <button
-                  type="button"
-                  className="underline font-semibold"
-                  onClick={() => {
-                    setSelected(nearbyExisting.sitio);
-                    cancelPlacing();
-                  }}
-                >
-                  Ver sitio existente
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
         {!placing && (
-          <>
-            <button
-              onClick={() => locateUser(true)}
-              className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-28 z-40 h-12 w-12 rounded-full bg-card border shadow-xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
-              aria-label="Mi ubicación"
-            >
-              <Crosshair className="h-5 w-5" />
-            </button>
-            <button
-              onClick={startPlacing}
-              className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-40 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
-              aria-label="Nuevo sitio"
-            >
-              <Plus className="h-8 w-8" strokeWidth={2.5} />
-            </button>
-          </>
-        )}
-
-        {placing && (
-          <div className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] inset-x-3 z-40 grid grid-cols-[1fr_48px_1fr] gap-2 sm:bottom-4 sm:inset-x-4">
-            <Button variant="secondary" className="h-12 min-w-0 shadow-lg" onClick={cancelPlacing}>
-              <X className="h-4 w-4 mr-1" /> Cancelar
-            </Button>
-            <Button
-              variant="outline"
-              className="h-12 w-12 shrink-0 bg-card p-0 shadow-lg"
-              onClick={() => {
-                if (!navigator.geolocation) return;
-                navigator.geolocation.getCurrentPosition(
-                  (pos) =>
-                    setPlaceCoords({
-                      lng: pos.coords.longitude,
-                      lat: pos.coords.latitude,
-                    }),
-                  (err) => toast.error(`GPS: ${err.message}`),
-                  { enableHighAccuracy: true, timeout: 10000 },
-                );
-              }}
-              aria-label="Usar mi ubicación"
-            >
-              <Crosshair className="h-4 w-4" />
-            </Button>
-            <Button
-              className="h-12 min-w-0 shadow-lg"
-              onClick={confirmPlacing}
-              disabled={!placeCoords}
-            >
-              <Check className="h-4 w-4 mr-1" /> Continuar
-            </Button>
-          </div>
+          <button
+            onClick={startPlacing}
+            className="absolute bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 z-40 h-16 w-16 rounded-full bg-accent text-accent-foreground shadow-2xl flex items-center justify-center active:scale-95 transition-transform sm:bottom-4"
+            aria-label="Nuevo sitio"
+          >
+            <Plus className="h-8 w-8" strokeWidth={2.5} />
+          </button>
         )}
       </div>
 
