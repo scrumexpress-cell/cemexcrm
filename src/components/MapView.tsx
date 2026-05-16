@@ -83,6 +83,10 @@ export function MapView({
 
   const [styleKey, setStyleKey] = useState<StyleKey>("streets");
   const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
+  useEffect(() => {
+    setView({ lng: center[0], lat: center[1], zoom });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1], zoom]);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [showHeat, setShowHeat] = useState(false);
   const [showPlants, setShowPlants] = useState(true);
