@@ -54,6 +54,25 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   const [cercanos, setCercanos] = useState<SitioCercano[]>([]);
   const [checkingDup, setCheckingDup] = useState(false);
 
+  // Tarea inicial (obligatoria)
+  const TAREA_TIPOS: { value: TareaTipo; label: string }[] = [
+    { value: "llamada", label: "Llamada" },
+    { value: "visita", label: "Visita" },
+    { value: "cotizacion", label: "Cotización" },
+    { value: "seguimiento", label: "Seguimiento" },
+    { value: "muestra", label: "Muestra" },
+    { value: "otro", label: "Otro" },
+  ];
+  const [tareaTipo, setTareaTipo] = useState<TareaTipo>("visita");
+  const [tareaTitulo, setTareaTitulo] = useState("");
+  const [tareaFecha, setTareaFecha] = useState(() => {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    return t.toISOString().slice(0, 10);
+  });
+  const [tareaAsignado, setTareaAsignado] = useState<string>("");
+  const [asignables, setAsignables] = useState<Profile[]>([]);
+
   // Planta CEMEX más cercana (geocerca automática)
   const plantaCercana = coords ? plantaMasCercana(coords) : null;
 
