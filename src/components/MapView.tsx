@@ -81,7 +81,7 @@ export function MapView({
   const dragMarkerRef = useRef(false);
   const activeTouchPointersRef = useRef(new Set<number>());
 
-  const [styleKey, setStyleKey] = useState<StyleKey>("streets");
+  const styleKey: StyleKey = "streets";
   const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
   useEffect(() => {
     setView({ lng: center[0], lat: center[1], zoom });
