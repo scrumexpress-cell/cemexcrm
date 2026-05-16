@@ -301,7 +301,7 @@ function MapPage() {
         />
 
         {placing && (
-          <div className="absolute bottom-24 inset-x-4 z-10 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
+          <div className="absolute bottom-20 inset-x-4 z-30 bg-card/95 backdrop-blur border rounded-lg px-3 py-2 shadow-lg text-xs space-y-1">
             <div className="font-medium text-sm">Ubica el nuevo sitio</div>
             <div className="text-muted-foreground">
               Toca el mapa o arrastra el pin para fijar el punto.
