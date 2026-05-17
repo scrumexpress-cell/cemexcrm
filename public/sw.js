@@ -2,7 +2,7 @@
 // Estrategia: cache-first para shell, network-first para datos.
 // También maneja Web Push (con VAPID configurado en server) y mensajes para notificaciones locales.
 
-const CACHE_VERSION = "cemex-sites-v1";
+const CACHE_VERSION = "cemex-sites-v3";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 
 self.addEventListener("install", (event) => {
@@ -43,6 +43,32 @@ self.addEventListener("fetch", (event) => {
   // Solo same-origin
   if (url.origin !== self.location.origin) return;
 
+  // Network-first para HTML/JS/CSS (evita servir bundles viejos en móvil)
+  const isAsset =
+    request.mode === "navigate" ||
+    request.destination === "document" ||
+    request.destination === "script" ||
+    request.destination === "style" ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".html");
+
+  if (isAsset) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok && res.type === "basic") {
+            const clone = res.clone();
+            caches.open(SHELL_CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request).then((c) => c || new Response("Sin conexión", { status: 503 }))),
+    );
+    return;
+  }
+
+  // Cache-first para el resto (imágenes, fuentes, etc.)
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
