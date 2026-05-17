@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flame, MapPin, AlertTriangle, Search, SlidersHorizontal, X } from "lucide-react";
+import { Briefcase, Flame, MapPin, AlertTriangle, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -227,34 +227,68 @@ function LeadsPage() {
         )}
       </div>
 
-      {/* Mobile etapa tabs */}
-      <div className="md:hidden -mx-3 px-3 mb-2 overflow-x-auto">
-        <div className="flex gap-1.5 pb-1">
-          {ETAPAS.map((etapa) => {
-            const count = porEtapa[etapa].length;
-            const active = mobileEtapa === etapa;
-            return (
-              <button
-                key={etapa}
-                onClick={() => setMobileEtapa(etapa)}
-                className={`shrink-0 px-3 py-1.5 rounded-full border text-xs font-medium transition flex items-center gap-1.5 border-t-[3px] ${ETAPA_ACCENT[etapa]} ${
-                  active
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-background text-foreground hover:bg-muted"
-                }`}
-              >
-                {ETAPA_LABEL[etapa]}
-                <span
-                  className={`tabular-nums text-[10px] rounded-full px-1.5 py-0.5 ${
-                    active ? "bg-background/20" : "bg-muted"
-                  }`}
+      {/* Mobile etapa selector: prev/next + dropdown, sin scroll horizontal */}
+      <div className="md:hidden mb-2">
+        {(() => {
+          const idx = ETAPAS.indexOf(mobileEtapa);
+          const goPrev = () => setMobileEtapa(ETAPAS[(idx - 1 + ETAPAS.length) % ETAPAS.length]);
+          const goNext = () => setMobileEtapa(ETAPAS[(idx + 1) % ETAPAS.length]);
+          const currentCount = porEtapa[mobileEtapa].length;
+          return (
+            <>
+              <div className={`flex items-stretch gap-1.5 rounded-xl border border-t-[3px] bg-background ${ETAPA_ACCENT[mobileEtapa]}`}>
+                <button
+                  onClick={goPrev}
+                  className="px-2 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label="Etapa anterior"
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <Select value={mobileEtapa} onValueChange={(v) => setMobileEtapa(v as SitioEtapa)}>
+                  <SelectTrigger className="flex-1 border-0 shadow-none focus:ring-0 h-10 px-1 text-sm font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ETAPAS.map((etapa) => (
+                      <SelectItem key={etapa} value={etapa}>
+                        <span className="flex items-center gap-2">
+                          <span>{ETAPA_LABEL[etapa]}</span>
+                          <span className="text-[10px] tabular-nums text-muted-foreground">
+                            ({porEtapa[etapa].length})
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center pr-2">
+                  <span className="text-[11px] font-bold tabular-nums bg-muted rounded-full px-2 py-0.5">
+                    {currentCount}
+                  </span>
+                </div>
+                <button
+                  onClick={goNext}
+                  className="px-2 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  aria-label="Etapa siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center justify-center gap-1">
+                {ETAPAS.map((etapa, i) => (
+                  <button
+                    key={etapa}
+                    onClick={() => setMobileEtapa(etapa)}
+                    aria-label={ETAPA_LABEL[etapa]}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === idx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/30"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {loading ? (
