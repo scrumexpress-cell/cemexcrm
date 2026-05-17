@@ -50,7 +50,7 @@ function MiDiaPage() {
       supabase
         .from("tareas")
         .select("*")
-        .eq("vendedor_id", user.id)
+        .or(`vendedor_id.eq.${user.id},creada_por.eq.${user.id}`)
         .eq("completada", false)
         .order("fecha_objetivo", { ascending: true }),
       supabase
