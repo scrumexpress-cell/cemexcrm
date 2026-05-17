@@ -2,7 +2,7 @@
 // Estrategia: cache-first para shell, network-first para datos.
 // También maneja Web Push (con VAPID configurado en server) y mensajes para notificaciones locales.
 
-const CACHE_VERSION = "cemex-sites-v1";
+const CACHE_VERSION = "cemex-sites-v3";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 
 self.addEventListener("install", (event) => {
