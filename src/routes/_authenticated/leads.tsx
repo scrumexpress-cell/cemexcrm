@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Flame, MapPin, AlertTriangle, Search, SlidersHorizontal, X } from "lucide-react";
+import { Briefcase, Flame, MapPin, AlertTriangle, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
