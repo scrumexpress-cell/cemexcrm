@@ -38,6 +38,16 @@ function leadDisplayName(s: Pick<Sitio, "nombre_referencia" | "direccion" | "lat
   return `Lead ${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`;
 }
 
+function vendedorLabel(
+  s: { vendedor_demo_nombre?: string | null; vendedor_id: string | null; vendedor?: { nombre: string | null; email: string | null } | null },
+  currentUserId: string | undefined,
+  selfLabel: string = "Tú",
+): string {
+  if (s.vendedor_demo_nombre) return s.vendedor_demo_nombre;
+  if (s.vendedor_id && s.vendedor_id === currentUserId) return selfLabel;
+  return s.vendedor?.nombre ?? s.vendedor?.email ?? "Otro vendedor";
+}
+
 // Approx. meters between two coords (haversine)
 function distMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371000;
