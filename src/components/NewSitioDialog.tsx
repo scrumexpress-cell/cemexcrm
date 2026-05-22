@@ -41,6 +41,25 @@ interface Props {
   onCreated: () => void;
 }
 
+function dedupeSitiosCercanos(items: SitioCercano[]): SitioCercano[] {
+  const seen = new Set<string>();
+  const unique: SitioCercano[] = [];
+
+  for (const item of items) {
+    const nombre = (item.nombre_referencia?.trim() || item.direccion?.split(",")[0]?.trim() || "lead")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+    const key = `${nombre}|${item.lat.toFixed(4)}|${item.lng.toFixed(4)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
 export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props) {
   const { profile, user } = useAuth();
   const [nombre, setNombre] = useState("");
@@ -95,7 +114,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
         if (error) {
           setCercanos([]);
         } else {
-          setCercanos((data as SitioCercano[]) ?? []);
+          setCercanos(dedupeSitiosCercanos((data as SitioCercano[]) ?? []));
         }
       })
       .then(() => {
