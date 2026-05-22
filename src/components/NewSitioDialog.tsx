@@ -46,7 +46,11 @@ function dedupeSitiosCercanos(items: SitioCercano[]): SitioCercano[] {
   const unique: SitioCercano[] = [];
 
   for (const item of items) {
-    const nombre = (item.nombre_referencia?.trim() || item.direccion?.split(",")[0]?.trim() || "lead")
+    const nombre = (
+      item.nombre_referencia?.trim() ||
+      item.direccion?.split(",")[0]?.trim() ||
+      "lead"
+    )
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
