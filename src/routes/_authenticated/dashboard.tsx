@@ -285,27 +285,28 @@ function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 px-6 py-6 max-w-7xl w-full mx-auto">
-      <div className="flex items-end justify-between mb-1 gap-4 flex-wrap">
+    <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6 max-w-7xl w-full mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-1">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Tablero ejecutivo
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline &amp; PnL</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Pipeline &amp; PnL</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Precio m³</span>
             <input
               type="number"
+              inputMode="numeric"
               value={precio}
               onChange={(e) => setPrecio(Number(e.target.value) || 0)}
-              className="w-24 h-8 px-2 rounded-md border bg-background text-sm tabular-nums"
+              className="w-20 sm:w-24 h-9 px-2 rounded-md border bg-background text-sm tabular-nums"
             />
             <span className="text-muted-foreground">MXN</span>
           </div>
           <Select value={horizonte} onValueChange={(v) => setHorizonte(v as "6" | "12")}>
-            <SelectTrigger className="h-8 w-[110px] text-xs">
+            <SelectTrigger className="h-9 w-[110px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -313,15 +314,16 @@ function DashboardPage() {
               <SelectItem value="12">Últimos 12 m</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading}>
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading} className="h-9">
             <Download className="h-4 w-4 mr-1" /> CSV
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mb-6">
+      <p className="text-xs text-muted-foreground mb-4 sm:mb-6">
         {profile?.role === "head" ? "Visión global" : "Tu zona"} · datos en MXN sobre supuesto de
         ${precio.toLocaleString()}/m³
       </p>
+
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
