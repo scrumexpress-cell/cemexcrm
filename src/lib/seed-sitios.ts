@@ -154,10 +154,11 @@ interface SitiosCapabilities {
   hasEtapa: boolean;
   hasLicitante: boolean;
   hasObraId: boolean;
+  hasVendedorDemoNombre: boolean;
 }
 
 async function detectSitiosCapabilities(): Promise<SitiosCapabilities> {
-  const defaults = { hasEtapa: false, hasLicitante: false, hasObraId: false };
+  const defaults = { hasEtapa: false, hasLicitante: false, hasObraId: false, hasVendedorDemoNombre: false };
   const { data } = await supabase.from("sitios").select("*").limit(1);
   const sample = data?.[0] as Record<string, unknown> | undefined;
   if (!sample) return defaults;
@@ -165,7 +166,21 @@ async function detectSitiosCapabilities(): Promise<SitiosCapabilities> {
     hasEtapa: "etapa" in sample,
     hasLicitante: "licitante" in sample,
     hasObraId: "obra_id" in sample,
+    hasVendedorDemoNombre: "vendedor_demo_nombre" in sample,
   };
+}
+
+// 20 nombres comunes de vendedores mexicanos para variar la demo.
+const DEMO_VENDEDORES = [
+  "Juan Pérez", "María García", "José Hernández", "Guadalupe Martínez",
+  "Luis Rodríguez", "Ana López", "Carlos Sánchez", "Laura Ramírez",
+  "Miguel Torres", "Sofía Flores", "Jorge Vázquez", "Fernanda Reyes",
+  "Ricardo Morales", "Daniela Cruz", "Alejandro Jiménez", "Patricia Gutiérrez",
+  "Roberto Mendoza", "Verónica Castillo", "Eduardo Ortiz", "Mariana Ruiz",
+];
+
+function demoVendedorFor(idx: number): string {
+  return DEMO_VENDEDORES[idx % DEMO_VENDEDORES.length];
 }
 
 function etapaFromSample(s: Sample): string {
