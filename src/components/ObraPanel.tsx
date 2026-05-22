@@ -446,7 +446,7 @@ export function ObraPanel({ sitio, onChanged }: Props) {
                   (h) => h.id === obra.ganador_sitio_id,
                 );
                 if (!w) return "—";
-                const v = w.vendedor?.nombre ?? w.vendedor?.email ?? "—";
+                const v = w.vendedor_demo_nombre ?? w.vendedor?.nombre ?? w.vendedor?.email ?? "—";
                 return `${w.licitante ?? w.nombre_referencia ?? "registro"} · vendedor ${v}`;
               })()}
             </div>
