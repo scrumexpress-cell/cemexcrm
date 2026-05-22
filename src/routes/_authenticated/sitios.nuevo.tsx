@@ -130,12 +130,16 @@ function NuevoSitioPage() {
       return;
     }
     if (!user) return;
+    if (!nombre.trim()) {
+      toast.error("Ponle nombre al lead");
+      return;
+    }
     setSubmitting(true);
 
     const payload = {
       lat: coords.lat,
       lng: coords.lng,
-      nombre_referencia: nombre || null,
+      nombre_referencia: nombre.trim(),
       direccion: direccion || null,
       estatus,
       volumen_m3: volumen ? Number(volumen) : null,
@@ -275,6 +279,7 @@ function NuevoSitioPage() {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Ej. Obra Av. Lázaro Cárdenas"
+            required
             className="h-12"
           />
         </div>
