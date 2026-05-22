@@ -386,17 +386,21 @@ function LeadsPage() {
   );
 }
 
-function renderCard(s: SitioConProfile, dias: number, mobile: boolean) {
+function renderCard(s: SitioConProfile, dias: number, mobile: boolean, isManager: boolean) {
   const v = s.volumen_m3 ?? 0;
   const critico = v >= 5000;
+  const diasEnEstado = Math.floor(
+    (Date.now() - new Date(s.updated_at).getTime()) / 86400000,
+  );
+  const estancado = isManager && !s.estatus_final && diasEnEstado > 5;
   return (
     <Link
       key={s.id}
       to="/sitios/$sitioId"
       params={{ sitioId: s.id }}
       className={`block bg-card border rounded-xl hover:shadow-md active:scale-[0.99] transition ${
-        mobile ? "p-3 shadow-sm" : "p-2.5"
-      }`}
+        estancado ? "border-red-500 ring-1 ring-red-500/40 bg-red-50/40 dark:bg-red-950/20" : ""
+      } ${mobile ? "p-3 shadow-sm" : "p-2.5"}`}
     >
       <div className="flex items-start gap-2.5">
         <div
