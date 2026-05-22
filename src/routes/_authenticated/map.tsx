@@ -97,6 +97,7 @@ function MapPage() {
           center: [pos.coords.longitude, pos.coords.latitude],
           zoom: 15,
         });
+        setRecenterNonce((n) => n + 1);
         if (showErrors) toast.success("Ubicación encontrada");
       },
       (err) => {
