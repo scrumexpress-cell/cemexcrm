@@ -218,6 +218,7 @@ async function insertSitios(
     };
     if (capabilities.hasEtapa) row.etapa = etapaFromSample(s);
     if (capabilities.hasLicitante) row.licitante = s.licitante ?? null;
+    if (capabilities.hasVendedorDemoNombre) row.vendedor_demo_nombre = demoVendedorFor(i);
     return row;
   });
 
