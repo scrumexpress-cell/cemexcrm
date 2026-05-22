@@ -332,7 +332,7 @@ export function ObraPanel({ sitio, onChanged }: Props) {
             const isThis = h.id === sitio.id;
             const isWinner = obra.ganador_sitio_id === h.id;
             const vendedorNombre =
-              h.vendedor?.nombre ?? h.vendedor?.email ?? "sin vendedor";
+              h.vendedor_demo_nombre ?? h.vendedor?.nombre ?? h.vendedor?.email ?? "sin vendedor";
             return (
               <li
                 key={h.id}
