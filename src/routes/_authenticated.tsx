@@ -140,17 +140,19 @@ function AuthLayout() {
     return (
       <Link
         to={to}
-        className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium relative ${
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium ${
           active ? "text-primary" : "text-muted-foreground"
         }`}
       >
-        <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+        <span className="relative inline-flex">
+          <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+          {badge ? (
+            <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+              {badge > 99 ? "99+" : badge}
+            </span>
+          ) : null}
+        </span>
         <span>{label}</span>
-        {badge ? (
-          <span className="absolute top-1 right-[28%] min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">
-            {badge > 99 ? "99+" : badge}
-          </span>
-        ) : null}
       </Link>
     );
   };
