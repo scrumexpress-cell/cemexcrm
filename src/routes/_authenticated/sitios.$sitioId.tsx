@@ -351,8 +351,13 @@ function SitioDetailPage() {
       </div>
 
       <div className="mt-6">
-        <SitioTareas sitioId={sitio.id} vendedorId={sitio.vendedor_id} />
+        <SitioTareas
+          sitioId={sitio.id}
+          vendedorId={sitio.vendedor_id}
+          disabled={!!sitio.estatus_final}
+        />
       </div>
+
 
       <div className="mt-6">
         <ObraPanel sitio={sitio} onChanged={() => void load()} />
