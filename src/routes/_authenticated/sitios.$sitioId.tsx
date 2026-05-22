@@ -24,9 +24,8 @@ import {
   type SitioEstatus,
   type SitioEstatusFinal,
   type Foto,
-  type Interaccion,
-  type InteraccionTipo,
 } from "@/integrations/supabase/client";
+
 import {
   ESTATUS_COLOR,
   ESTATUS_LABEL,
