@@ -189,11 +189,13 @@ function AuthLayout() {
         <Outlet />
       </main>
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
-        <NavLink to="/dia" icon={Sun} label="Mi día" />
-        <NavLink to="/map" icon={MapIcon} label="Mapa" />
+        {role !== "head" && <NavLink to="/dia" icon={Sun} label="Mi día" />}
+        {role !== "head" && <NavLink to="/map" icon={MapIcon} label="Mapa" />}
         <NavLink to="/leads" icon={Briefcase} label="Leads" />
-        <NavLink to="/alertas" icon={Bell} label="Alertas" badge={unread} />
         {role !== "vendedor" && (
+          <NavLink to="/alertas" icon={Bell} label="Alertas" badge={unread} />
+        )}
+        {role === "head" && (
           <NavLink to="/dashboard" icon={BarChart3} label="Tablero" />
         )}
       </nav>
