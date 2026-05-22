@@ -96,6 +96,7 @@ function SharedSitioPage() {
               estatus: sitio.estatus,
               volumen_m3: sitio.volumen_m3,
               vendedor_id: null,
+              vendedor_demo_nombre: null,
               zona_id: null,
               fecha_cierre: null,
               estatus_final: sitio.estatus_final,

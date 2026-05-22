@@ -41,7 +41,7 @@ function AuthLayout() {
     if (!user) return;
     // Auto-siembra de datos demo (una sola vez por usuario)
     void (async () => {
-      const flagKey = `cemex-demo-seeded-v4-${user.id}`;
+      const flagKey = `cemex-demo-seeded-v5-${user.id}`;
       if (typeof window === "undefined") return;
       if (window.localStorage.getItem(flagKey)) return;
       try {

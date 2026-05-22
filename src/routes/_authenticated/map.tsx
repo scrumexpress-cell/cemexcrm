@@ -38,6 +38,16 @@ function leadDisplayName(s: Pick<Sitio, "nombre_referencia" | "direccion" | "lat
   return `Lead ${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`;
 }
 
+function vendedorLabel(
+  s: { vendedor_demo_nombre?: string | null; vendedor_id: string | null; vendedor?: { nombre: string | null; email: string | null } | null },
+  currentUserId: string | undefined,
+  selfLabel: string = "Tú",
+): string {
+  if (s.vendedor_demo_nombre) return s.vendedor_demo_nombre;
+  if (s.vendedor_id && s.vendedor_id === currentUserId) return selfLabel;
+  return s.vendedor?.nombre ?? s.vendedor?.email ?? "Otro vendedor";
+}
+
 // Approx. meters between two coords (haversine)
 function distMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371000;
@@ -334,11 +344,7 @@ function MapPage() {
           <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center justify-between gap-2">
             <span>
               ⚠ Sitio a {Math.round(nearbyExisting.d)} m de{" "}
-              {nearbyExisting.sitio.vendedor_id === user?.id
-                ? "ti"
-                : (nearbyExisting.sitio.vendedor?.nombre ??
-                  nearbyExisting.sitio.vendedor?.email ??
-                  "otro vendedor")}
+              {vendedorLabel(nearbyExisting.sitio, user?.id, "ti")}
             </span>
             <button
               type="button"
@@ -420,7 +426,9 @@ function MapPage() {
             {selected.volumen_m3 != null && (
               <Badge variant="outline">{selected.volumen_m3.toLocaleString()} m³</Badge>
             )}
-            {selected.vendedor_id === user?.id ? (
+            {selected.vendedor_demo_nombre ? (
+              <Badge variant="secondary">Asignado a {selected.vendedor_demo_nombre}</Badge>
+            ) : selected.vendedor_id === user?.id ? (
               <Badge className="bg-accent text-accent-foreground">Tú llevas este lead</Badge>
             ) : (
               <Badge variant="secondary">
@@ -429,7 +437,7 @@ function MapPage() {
               </Badge>
             )}
           </div>
-          {selected.vendedor_id !== user?.id && (
+          {!selected.vendedor_demo_nombre && selected.vendedor_id !== user?.id && (
             <p className="text-xs text-muted-foreground mb-3">
               Solo el vendedor asignado puede dar seguimiento a esta oportunidad.
             </p>
@@ -473,7 +481,6 @@ function MapPage() {
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {nearbyMatches.map(({ sitio, d }) => {
-              const mine = sitio.vendedor_id === user?.id;
               return (
                 <button
                   key={sitio.id}
@@ -505,9 +512,7 @@ function MapPage() {
                     <span>{Math.round(d)} m</span>
                     <span>·</span>
                     <span className="truncate">
-                      {mine
-                        ? "Tú"
-                        : (sitio.vendedor?.nombre ?? sitio.vendedor?.email ?? "Otro vendedor")}
+                      {vendedorLabel(sitio, user?.id)}
                     </span>
                     {sitio.volumen_m3 != null && (
                       <>
