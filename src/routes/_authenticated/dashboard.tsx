@@ -707,7 +707,7 @@ function Kpi({
         </div>
         <Icon className={`h-4 w-4 ${primary ? "opacity-80" : "text-muted-foreground"}`} />
       </div>
-      <div className="text-2xl font-semibold tabular-nums mt-2 tracking-tight">{value}</div>
+      <div className="text-xl sm:text-2xl font-semibold tabular-nums mt-2 tracking-tight break-words">{value}</div>
       <div className="flex items-center gap-1.5 mt-1">
         {delta !== undefined && (
           <span
