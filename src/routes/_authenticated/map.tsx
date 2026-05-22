@@ -165,10 +165,20 @@ function MapPage() {
   const PROXIMITY_RADIUS_M = 150;
   const nearbyMatches = useMemo(() => {
     if (!placeCoords) return [];
-    return sitios
+    const raw = sitios
       .map((s) => ({ sitio: s, d: distMeters(placeCoords, { lat: s.lat, lng: s.lng }) }))
       .filter((x) => x.d <= PROXIMITY_RADIUS_M)
       .sort((a, b) => a.d - b.d);
+    // Dedupe: misma ubicación (~5 m) + mismo nombre cuentan como un solo lead
+    const seen = new Set<string>();
+    const unique: typeof raw = [];
+    for (const item of raw) {
+      const key = `${leadDisplayName(item.sitio).toLowerCase()}|${item.sitio.lat.toFixed(4)}|${item.sitio.lng.toFixed(4)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+    }
+    return unique;
   }, [placeCoords, sitios]);
   const nearbyExisting = nearbyMatches[0] ?? null;
 
