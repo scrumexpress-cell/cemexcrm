@@ -453,7 +453,7 @@ function renderCard(s: SitioConProfile, dias: number, mobile: boolean) {
                 mobile ? "text-[11px] max-w-[140px]" : "text-[10px] max-w-[100px]"
               }`}
             >
-              {s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
+              {s.vendedor_demo_nombre ?? s.profiles?.nombre ?? s.profiles?.email ?? "Sin asignar"}
             </span>
           </div>
         </div>
