@@ -426,7 +426,9 @@ function MapPage() {
             {selected.volumen_m3 != null && (
               <Badge variant="outline">{selected.volumen_m3.toLocaleString()} m³</Badge>
             )}
-            {selected.vendedor_id === user?.id ? (
+            {selected.vendedor_demo_nombre ? (
+              <Badge variant="secondary">Asignado a {selected.vendedor_demo_nombre}</Badge>
+            ) : selected.vendedor_id === user?.id ? (
               <Badge className="bg-accent text-accent-foreground">Tú llevas este lead</Badge>
             ) : (
               <Badge variant="secondary">
@@ -435,7 +437,7 @@ function MapPage() {
               </Badge>
             )}
           </div>
-          {selected.vendedor_id !== user?.id && (
+          {!selected.vendedor_demo_nombre && selected.vendedor_id !== user?.id && (
             <p className="text-xs text-muted-foreground mb-3">
               Solo el vendedor asignado puede dar seguimiento a esta oportunidad.
             </p>
