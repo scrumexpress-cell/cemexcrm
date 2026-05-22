@@ -2,9 +2,9 @@ import type { SitioEstatus } from "@/integrations/supabase/client";
 import { Target, Swords, HardHat, Mountain, type LucideIcon } from "lucide-react";
 
 export const ESTATUS_LABEL: Record<SitioEstatus, string> = {
-  prospecto: "Prospecto",
-  competidor_presente: "Competidor presente",
-  en_proceso: "En proceso",
+  prospecto: "Obra prospecto",
+  competidor_presente: "Obra con competidor",
+  en_proceso: "Obra en construcción",
   movimiento_de_tierra: "Movimiento de tierra",
 };
 
