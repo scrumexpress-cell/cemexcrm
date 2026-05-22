@@ -365,12 +365,18 @@ export async function resetAndSeedAll(user: User, zonaId: string | null) {
 
   if (ids.length > 0) {
     // Las dependencias (interacciones, alertas, fotos, audit) tienen ON DELETE CASCADE
-    await supabase.from("interacciones").delete().in("sitio_id", ids);
-    await supabase.from("alertas").delete().eq("usuario_id", user.id);
-    await supabase.from("sitios").delete().in("id", ids);
+    const [{ error: intErr }, { error: alertErr }, { error: sitiosErr }] = await Promise.all([
+      supabase.from("interacciones").delete().in("sitio_id", ids),
+      supabase.from("alertas").delete().eq("usuario_id", user.id),
+      supabase.from("sitios").delete().in("id", ids),
+    ]);
+    if (intErr) console.warn("reset interacciones:", intErr.message);
+    if (alertErr) console.warn("reset alertas:", alertErr.message);
+    if (sitiosErr) throw new Error(`No se pudieron borrar leads demo anteriores: ${sitiosErr.message}`);
   }
   if (capabilities.hasObraId && obraIds.length > 0) {
-    await supabase.from("obras").delete().in("id", obraIds);
+    const { error: obrasErr } = await supabase.from("obras").delete().in("id", obraIds);
+    if (obrasErr) console.warn("reset obras:", obrasErr.message);
   }
 
   const rows = await insertSitios(user, zonaId, capabilities);
