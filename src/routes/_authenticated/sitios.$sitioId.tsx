@@ -57,7 +57,7 @@ function sitioDisplayName(sitio: Sitio): string {
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  useAuth();
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
   const [loading, setLoading] = useState(true);
