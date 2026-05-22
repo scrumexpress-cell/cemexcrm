@@ -6,7 +6,7 @@ import { MapView } from "@/components/MapView";
 import { NewSitioDialog } from "@/components/NewSitioDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { seedSampleSitios } from "@/lib/seed-sitios";
+import { resetAndSeedAll } from "@/lib/seed-sitios";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -102,8 +102,8 @@ function MapPage() {
     if (!user) return;
     setSeeding(true);
     try {
-      await seedSampleSitios({ user, zonaId: profile?.zona_id ?? null });
-      toast.success("10 sitios de ejemplo cargados");
+      await resetAndSeedAll(user, profile?.zona_id ?? null);
+      toast.success("Datos de ejemplo recargados");
       await load();
     } catch (e) {
       toast.error(`Error al sembrar: ${(e as Error).message}`);
