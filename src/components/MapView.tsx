@@ -85,10 +85,17 @@ export function MapView({
 
   const styleKey: StyleKey = "streets";
   const [view, setView] = useState(() => ({ lng: center[0], lat: center[1], zoom }));
+  const centerRef = useRef({ lng: center[0], lat: center[1], zoom });
+  centerRef.current = { lng: center[0], lat: center[1], zoom };
   useEffect(() => {
     setView({ lng: center[0], lat: center[1], zoom });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center[0], center[1], zoom, recenterNonce]);
+  }, [center[0], center[1], zoom]);
+  useEffect(() => {
+    if (recenterNonce === undefined) return;
+    const c = centerRef.current;
+    setView({ lng: c.lng, lat: c.lat, zoom: c.zoom });
+  }, [recenterNonce]);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [showHeat] = useState(false);
   const [showPlants] = useState(false);
