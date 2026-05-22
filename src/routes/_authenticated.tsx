@@ -158,8 +158,8 @@ function AuthLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-sm">
+    <div className="h-dvh flex flex-col bg-background">
+      <header className="sticky top-0 z-30 bg-primary text-primary-foreground shadow-sm pt-[env(safe-area-inset-top)]">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/map" className="flex items-center gap-2.5">
             <div className="bg-white rounded-md px-2 py-1 flex items-center">
@@ -175,6 +175,7 @@ function AuthLayout() {
           <Button
             size="sm"
             variant="secondary"
+            aria-label="Cerrar sesión"
             onClick={async () => {
               await signOut();
               router.invalidate();
@@ -185,10 +186,10 @@ function AuthLayout() {
           </Button>
         </div>
       </header>
-      <main className="flex-1 flex flex-col pb-16 min-h-0 overflow-y-auto">
+      <main className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-[calc(4rem_+_env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
+      <nav className="fixed bottom-0 inset-x-0 z-30 bg-card border-t flex h-16 pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
         {role !== "head" && <NavLink to="/dia" icon={Sun} label="Mi día" />}
         {role !== "head" && <NavLink to="/map" icon={MapIcon} label="Mapa" />}
         <NavLink to="/leads" icon={Briefcase} label="Leads" />
