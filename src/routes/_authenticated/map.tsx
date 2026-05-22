@@ -84,6 +84,7 @@ function MapPage() {
   const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(
     { center: [-103.3496, 20.6597], zoom: 15 },
   );
+  const [recenterNonce, setRecenterNonce] = useState(0);
 
   const locateUser = (showErrors = false) => {
     if (!navigator.geolocation) {
@@ -96,6 +97,7 @@ function MapPage() {
           center: [pos.coords.longitude, pos.coords.latitude],
           zoom: 15,
         });
+        setRecenterNonce((n) => n + 1);
         if (showErrors) toast.success("Ubicación encontrada");
       },
       (err) => {
@@ -366,6 +368,7 @@ function MapPage() {
           currentUserId={user?.id ?? null}
           center={initialView?.center}
           zoom={initialView?.zoom}
+          recenterNonce={recenterNonce}
           onPinClick={(s) => {
             // Si está en modo "colocar pin", cancelarlo y abrir el lead
             if (placing) {
