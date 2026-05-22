@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,18 @@ function sitioDisplayName(sitio: Sitio): string {
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
+
+  function goBack() {
+    // Si hay historial dentro de la app, regresa a la sección previa
+    // (mapa, leads, dia, alertas, dashboard, etc). Si no, cae al mapa.
+    if (window.history.length > 1) {
+      router.history.back();
+    } else {
+      void navigate({ to: "/map" });
+    }
+  }
+  
   
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
@@ -189,10 +201,10 @@ function SitioDetailPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate({ to: "/map" })}
+        onClick={goBack}
         className="mb-3 -ml-2 text-muted-foreground"
       >
-        <ArrowLeft className="h-4 w-4 mr-1" /> Mapa
+        <ArrowLeft className="h-4 w-4 mr-1" /> Regresar
       </Button>
 
       {/* Hero del lead */}
