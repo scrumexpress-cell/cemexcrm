@@ -453,6 +453,15 @@ function renderCard(s: SitioConProfile, dias: number, mobile: boolean, isManager
                 <AlertTriangle className="h-2.5 w-2.5" /> {dias}d
               </Badge>
             )}
+            {estancado && (
+              <Badge
+                className={`gap-0.5 bg-red-600 text-white border-red-600 hover:bg-red-600 ${
+                  mobile ? "text-[10px] px-2 py-0.5" : "text-[9px] px-1.5 py-0"
+                }`}
+              >
+                <AlertTriangle className="h-2.5 w-2.5" /> {diasEnEstado}d en esta etapa
+              </Badge>
+            )}
             <span
               className={`text-muted-foreground ml-auto truncate ${
                 mobile ? "text-[11px] max-w-[140px]" : "text-[10px] max-w-[100px]"
