@@ -16,6 +16,7 @@ interface Props {
   onMapClick?: (lng: number, lat: number) => void;
   center?: [number, number];
   zoom?: number;
+  recenterNonce?: number;
   className?: string;
   draggableMarker?: { lng: number; lat: number };
   onMarkerDrag?: (lng: number, lat: number) => void;
