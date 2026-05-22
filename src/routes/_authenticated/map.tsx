@@ -343,7 +343,11 @@ function MapPage() {
           center={initialView?.center}
           zoom={initialView?.zoom}
           onPinClick={(s) => {
-            if (placing) return;
+            // Si está en modo "colocar pin", cancelarlo y abrir el lead
+            if (placing) {
+              setPlacing(false);
+              setPlaceCoords(null);
+            }
             void navigate({ to: "/sitios/$sitioId", params: { sitioId: s.id } });
           }}
           onMapClick={(lng, lat) => {
