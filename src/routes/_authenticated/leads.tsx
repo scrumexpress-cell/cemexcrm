@@ -102,8 +102,9 @@ function LeadsPage() {
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
       const v = s.volumen_m3 ?? 0;
-      if (filterPrioridad === "importantes" && v < 1000) return false;
-      if (filterPrioridad === "criticos" && v < 5000) return false;
+      if (filterPrioridad === "bajo" && !(v < 500)) return false;
+      if (filterPrioridad === "medio" && !(v >= 500 && v < 3500)) return false;
+      if (filterPrioridad === "alto" && !(v >= 3500)) return false;
       if (filterSeguimiento !== "todos") {
         if (s.estatus_final) return false;
         const d = diasSinSeguimiento(s);
