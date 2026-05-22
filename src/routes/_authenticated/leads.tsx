@@ -79,6 +79,7 @@ function cleanAndDedupeSitios(rows: SitioConProfile[]): SitioConProfile[] {
 
 function LeadsPage() {
   const { profile } = useAuth();
+  const isManager = profile?.role === "gerente" || profile?.role === "head";
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
   const [lastInteraction, setLastInteraction] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
