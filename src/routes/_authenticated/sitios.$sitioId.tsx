@@ -57,6 +57,18 @@ function sitioDisplayName(sitio: Sitio): string {
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
+
+  function goBack() {
+    // Si hay historial dentro de la app, regresa a la sección previa
+    // (mapa, leads, dia, alertas, dashboard, etc). Si no, cae al mapa.
+    if (window.history.length > 1) {
+      router.history.back();
+    } else {
+      void navigate({ to: "/map" });
+    }
+  }
+  
   
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
