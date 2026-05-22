@@ -255,15 +255,20 @@ function SitioDetailPage() {
             Cerrado: {FINAL_OPTIONS.find((o) => o.value === sitio.estatus_final)?.label ?? sitio.estatus_final}
           </Badge>
         ) : (
-          <Badge
-            className="text-sm px-3 py-1"
-            style={{
-              backgroundColor: ESTATUS_COLOR[sitio.estatus],
-              color: "white",
-            }}
-          >
-            {ESTATUS_LABEL[sitio.estatus]}
-          </Badge>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+              Situación en campo
+            </span>
+            <Badge
+              className="text-sm px-3 py-1"
+              style={{
+                backgroundColor: ESTATUS_COLOR[sitio.estatus],
+                color: "white",
+              }}
+            >
+              {ESTATUS_LABEL[sitio.estatus]}
+            </Badge>
+          </div>
         )}
         <span className="text-[11px] text-muted-foreground tabular-nums">
           {sitio.lat.toFixed(5)}, {sitio.lng.toFixed(5)}
