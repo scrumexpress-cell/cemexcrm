@@ -481,7 +481,6 @@ function MapPage() {
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {nearbyMatches.map(({ sitio, d }) => {
-              const mine = sitio.vendedor_id === user?.id;
               return (
                 <button
                   key={sitio.id}
