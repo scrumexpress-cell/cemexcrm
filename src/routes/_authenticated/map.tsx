@@ -103,7 +103,7 @@ function MapPage() {
     setSeeding(true);
     try {
       await resetAndSeedAll(user, profile?.zona_id ?? null);
-      toast.success("10 sitios de ejemplo cargados");
+      toast.success("Datos de ejemplo recargados");
       await load();
     } catch (e) {
       toast.error(`Error al sembrar: ${(e as Error).message}`);
