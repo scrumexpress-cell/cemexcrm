@@ -45,6 +45,7 @@ export interface Sitio {
   estatus: SitioEstatus;
   volumen_m3: number | null;
   vendedor_id: string | null;
+  vendedor_demo_nombre: string | null;
   zona_id: string | null;
   fecha_cierre: string | null;
   estatus_final: SitioEstatusFinal | null;
