@@ -139,10 +139,9 @@ function MapPage() {
       if (filterOwner === "others" && s.vendedor_id === user?.id) return false;
       if (filterVolumen !== "all") {
         const v = s.volumen_m3 ?? 0;
-        if (filterVolumen === "0-499" && !(v < 500)) return false;
-        if (filterVolumen === "500-999" && !(v >= 500 && v < 1000)) return false;
-        if (filterVolumen === "1000-4999" && !(v >= 1000 && v < 5000)) return false;
-        if (filterVolumen === "5000+" && !(v >= 5000)) return false;
+        if (filterVolumen === "bajo" && !(v < 500)) return false;
+        if (filterVolumen === "medio" && !(v >= 500 && v < 3500)) return false;
+        if (filterVolumen === "alto" && !(v >= 3500)) return false;
       }
       if (q) {
         const hay = `${s.nombre_referencia ?? ""} ${s.direccion ?? ""} ${
