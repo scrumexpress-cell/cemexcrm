@@ -128,19 +128,28 @@ function MiDiaPage() {
 
   return (
     <div className="flex-1 px-4 py-4 max-w-2xl w-full mx-auto pb-24">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-lg font-bold flex items-center gap-2">
-          <Sun className="h-5 w-5 text-amber-500" />
-          Mi día
-        </h1>
-        <Button size="sm" onClick={() => setShowNewTarea(true)} className="h-9">
-          <Plus className="h-4 w-4 mr-1" /> Nueva tarea
+      <div className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground rounded-2xl p-4 mb-4 shadow-sm flex items-center gap-3">
+        <div className="h-11 w-11 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+          <Sun className="h-6 w-6" strokeWidth={2.2} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-bold leading-tight">
+            Hola{profile?.nombre ? `, ${profile.nombre.split(" ")[0]}` : ""}
+          </h1>
+          <p className="text-[12px] text-primary-foreground/80 leading-tight">
+            Tu trabajo de hoy en un vistazo.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setShowNewTarea(true)}
+          className="h-9 shrink-0"
+        >
+          <Plus className="h-4 w-4 mr-1" /> Tarea
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Hola{profile?.nombre ? `, ${profile.nombre.split(" ")[0]}` : ""}. Aquí
-        está tu trabajo de hoy.
-      </p>
+
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>

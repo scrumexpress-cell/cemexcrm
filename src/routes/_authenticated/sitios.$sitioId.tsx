@@ -190,51 +190,68 @@ function SitioDetailPage() {
         variant="ghost"
         size="sm"
         onClick={() => navigate({ to: "/map" })}
-        className="mb-3 -ml-2"
+        className="mb-3 -ml-2 text-muted-foreground"
       >
         <ArrowLeft className="h-4 w-4 mr-1" /> Mapa
       </Button>
 
-      <div className="mb-3">
+      {/* Hero del lead */}
+      <div className="bg-card border rounded-2xl p-4 mb-3 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div
+            className="h-12 w-12 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm text-base font-bold"
+            style={{ backgroundColor: ESTATUS_COLOR[sitio.estatus] }}
+          >
+            {sitioDisplayName(sitio).charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold leading-tight truncate">
+              {sitioDisplayName(sitio)}
+            </h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {sitio.estatus_final ? (
+                <Badge
+                  className="text-xs px-2.5 py-0.5"
+                  style={{
+                    backgroundColor:
+                      sitio.estatus_final === "ganado"
+                        ? "#10B981"
+                        : sitio.estatus_final === "perdido"
+                          ? "#E1251B"
+                          : "#6B7280",
+                    color: "white",
+                  }}
+                >
+                  Cerrado: {FINAL_OPTIONS.find((o) => o.value === sitio.estatus_final)?.label ?? sitio.estatus_final}
+                </Badge>
+              ) : (
+                <Badge
+                  className="text-xs px-2.5 py-0.5"
+                  style={{
+                    backgroundColor: ESTATUS_COLOR[sitio.estatus],
+                    color: "white",
+                  }}
+                >
+                  {ESTATUS_LABEL[sitio.estatus]}
+                </Badge>
+              )}
+              {sitio.volumen_m3 != null && (
+                <Badge variant="outline" className="text-xs px-2 py-0.5 tabular-nums">
+                  {sitio.volumen_m3.toLocaleString()} m³
+                </Badge>
+              )}
+              <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
+                {sitio.lat.toFixed(4)}, {sitio.lng.toFixed(4)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4">
         <EtapaStepper etapa={sitio.etapa} />
       </div>
 
-      <div className="flex items-center justify-between gap-2 mb-4">
-        {sitio.estatus_final ? (
-          <Badge
-            className="text-sm px-3 py-1"
-            style={{
-              backgroundColor:
-                sitio.estatus_final === "ganado"
-                  ? "#10B981"
-                  : sitio.estatus_final === "perdido"
-                    ? "#E1251B"
-                    : "#6B7280",
-              color: "white",
-            }}
-          >
-            Cerrado: {FINAL_OPTIONS.find((o) => o.value === sitio.estatus_final)?.label ?? sitio.estatus_final}
-          </Badge>
-        ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
-              Situación en campo
-            </span>
-            <Badge
-              className="text-sm px-3 py-1"
-              style={{
-                backgroundColor: ESTATUS_COLOR[sitio.estatus],
-                color: "white",
-              }}
-            >
-              {ESTATUS_LABEL[sitio.estatus]}
-            </Badge>
-          </div>
-        )}
-        <span className="text-[11px] text-muted-foreground tabular-nums">
-          {sitio.lat.toFixed(5)}, {sitio.lng.toFixed(5)}
-        </span>
-      </div>
 
       <div className="space-y-4 bg-card border rounded-xl p-4">
         <div className="space-y-2">
