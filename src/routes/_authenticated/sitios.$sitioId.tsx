@@ -226,21 +226,36 @@ function SitioDetailPage() {
         <EtapaStepper etapa={sitio.etapa} />
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <Badge
-          style={{
-            backgroundColor: ESTATUS_COLOR[sitio.estatus],
-            color: "white",
-          }}
-        >
-          {ESTATUS_LABEL[sitio.estatus]}
-        </Badge>
-        {sitio.estatus_final && (
-          <Badge variant="outline">Cerrado: {sitio.estatus_final}</Badge>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        {sitio.estatus_final ? (
+          <Badge
+            className="text-sm px-3 py-1"
+            style={{
+              backgroundColor:
+                sitio.estatus_final === "ganado"
+                  ? "#10B981"
+                  : sitio.estatus_final === "perdido"
+                    ? "#E1251B"
+                    : "#6B7280",
+              color: "white",
+            }}
+          >
+            Cerrado: {FINAL_OPTIONS.find((o) => o.value === sitio.estatus_final)?.label ?? sitio.estatus_final}
+          </Badge>
+        ) : (
+          <Badge
+            className="text-sm px-3 py-1"
+            style={{
+              backgroundColor: ESTATUS_COLOR[sitio.estatus],
+              color: "white",
+            }}
+          >
+            {ESTATUS_LABEL[sitio.estatus]}
+          </Badge>
         )}
-        <Badge variant="secondary">
+        <span className="text-[11px] text-muted-foreground tabular-nums">
           {sitio.lat.toFixed(5)}, {sitio.lng.toFixed(5)}
-        </Badge>
+        </span>
       </div>
 
       <div className="space-y-4 bg-card border rounded-xl p-4">
