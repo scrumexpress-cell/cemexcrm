@@ -102,8 +102,9 @@ function LeadsPage() {
     return sitios.filter((s) => {
       if (filterEstatus !== "all" && s.estatus !== filterEstatus) return false;
       const v = s.volumen_m3 ?? 0;
-      if (filterPrioridad === "importantes" && v < 1000) return false;
-      if (filterPrioridad === "criticos" && v < 5000) return false;
+      if (filterPrioridad === "bajo" && !(v < 500)) return false;
+      if (filterPrioridad === "medio" && !(v >= 500 && v < 3500)) return false;
+      if (filterPrioridad === "alto" && !(v >= 3500)) return false;
       if (filterSeguimiento !== "todos") {
         if (s.estatus_final) return false;
         const d = diasSinSeguimiento(s);
@@ -182,9 +183,10 @@ function LeadsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos los leads</SelectItem>
-            <SelectItem value="importantes">≥ 1,000 m³ (importantes)</SelectItem>
-            <SelectItem value="criticos">≥ 5,000 m³ (críticos)</SelectItem>
+            <SelectItem value="todos">Todo volumen</SelectItem>
+            <SelectItem value="bajo">0 – 500 m³</SelectItem>
+            <SelectItem value="medio">500 – 3,500 m³</SelectItem>
+            <SelectItem value="alto">3,500 m³ en adelante</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterEstatus} onValueChange={setFilterEstatus}>
