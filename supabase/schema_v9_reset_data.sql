@@ -41,4 +41,7 @@ delete from public.sitios;
 -- Audit log
 delete from public.audit_log;
 
+-- Archivos físicos de fotos en Storage (bucket sitio-fotos)
+delete from storage.objects where bucket_id = 'sitio-fotos';
+
 commit;
