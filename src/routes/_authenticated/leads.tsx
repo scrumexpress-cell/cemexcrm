@@ -371,7 +371,7 @@ function LeadsPage() {
                           Sin leads
                         </div>
                       ) : (
-                        items.map((s) => renderCard(s, diasSinSeguimiento(s), false))
+                        items.map((s) => renderCard(s, diasSinSeguimiento(s), false, isManager))
                       )}
                     </div>
                   </div>
