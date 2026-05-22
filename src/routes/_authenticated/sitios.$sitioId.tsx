@@ -24,15 +24,14 @@ import {
   type SitioEstatus,
   type SitioEstatusFinal,
   type Foto,
-  type Interaccion,
-  type InteraccionTipo,
 } from "@/integrations/supabase/client";
+
 import {
   ESTATUS_COLOR,
   ESTATUS_LABEL,
   ESTATUS_OPTIONS,
 } from "@/lib/sitio-utils";
-import { useAuth } from "@/hooks/use-auth";
+
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/sitios/$sitioId")({
@@ -46,14 +45,6 @@ const FINAL_OPTIONS: { value: SitioEstatusFinal; label: string }[] = [
   { value: "inactivo", label: "Inactivo" },
 ];
 
-const TIPO_OPTIONS: { value: InteraccionTipo; label: string }[] = [
-  { value: "llamada", label: "Llamada" },
-  { value: "visita", label: "Visita" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "cotizacion", label: "Cotización" },
-  { value: "muestra", label: "Muestra" },
-  { value: "otro", label: "Otro" },
-];
 
 function sitioDisplayName(sitio: Sitio): string {
   const nombre = sitio.nombre_referencia?.trim();
@@ -66,10 +57,9 @@ function sitioDisplayName(sitio: Sitio): string {
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  
   const [sitio, setSitio] = useState<Sitio | null>(null);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
-  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -86,12 +76,6 @@ function SitioDetailPage() {
   const [motivo, setMotivo] = useState("");
   const [competidor, setCompetidor] = useState("");
 
-  // bitácora
-  const [intTipo, setIntTipo] = useState<InteraccionTipo>("llamada");
-  const [intResultado, setIntResultado] = useState("");
-  const [intNotas, setIntNotas] = useState("");
-  const [intSaving, setIntSaving] = useState(false);
-
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,14 +83,9 @@ function SitioDetailPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: s, error: sErr }, { data: fs }, { data: ints }] = await Promise.all([
+    const [{ data: s, error: sErr }, { data: fs }] = await Promise.all([
       supabase.from("sitios").select("*").eq("id", sitioId).maybeSingle(),
       supabase.from("fotos").select("*").eq("sitio_id", sitioId),
-      supabase
-        .from("interacciones")
-        .select("*")
-        .eq("sitio_id", sitioId)
-        .order("fecha", { ascending: false }),
     ]);
     if (sErr) {
       toast.error(`No se pudo cargar el sitio: ${sErr.message}`);
@@ -130,27 +109,9 @@ function SitioDetailPage() {
       }));
       setFotos(withUrls);
     }
-    setInteracciones((ints as Interaccion[]) ?? []);
     setLoading(false);
   }
 
-  async function addInteraccion() {
-    if (!sitio || !user) return;
-    setIntSaving(true);
-    const { error } = await supabase.from("interacciones").insert({
-      sitio_id: sitio.id,
-      vendedor_id: user.id,
-      tipo: intTipo,
-      resultado: intResultado || null,
-      notas: intNotas || null,
-    });
-    setIntSaving(false);
-    if (error) return toast.error(error.message);
-    setIntResultado("");
-    setIntNotas("");
-    toast.success("Interacción registrada");
-    void load();
-  }
 
   async function saveEdits() {
     if (!sitio) return;
@@ -351,8 +312,13 @@ function SitioDetailPage() {
       </div>
 
       <div className="mt-6">
-        <SitioTareas sitioId={sitio.id} vendedorId={sitio.vendedor_id} />
+        <SitioTareas
+          sitioId={sitio.id}
+          vendedorId={sitio.vendedor_id}
+          disabled={!!sitio.estatus_final}
+        />
       </div>
+
 
       <div className="mt-6">
         <ObraPanel sitio={sitio} onChanged={() => void load()} />
@@ -392,78 +358,6 @@ function SitioDetailPage() {
         )}
       </div>
 
-      {/* Bitácora */}
-      <div className="mt-6">
-        <h3 className="font-semibold mb-2">Bitácora</h3>
-        {!sitio.estatus_final && (
-          <div className="bg-card border rounded-xl p-4 space-y-3 mb-3">
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={intTipo} onValueChange={(v) => setIntTipo(v as InteraccionTipo)}>
-                <SelectTrigger className="h-12">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPO_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Resultado"
-                value={intResultado}
-                onChange={(e) => setIntResultado(e.target.value)}
-                className="h-12"
-              />
-            </div>
-            <Textarea
-              placeholder="Notas (opcional)"
-              value={intNotas}
-              onChange={(e) => setIntNotas(e.target.value)}
-              rows={2}
-            />
-            <Button
-              onClick={addInteraccion}
-              disabled={intSaving}
-              className="w-full h-11"
-            >
-              Registrar interacción
-            </Button>
-          </div>
-        )}
-        {interacciones.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Aún no hay interacciones registradas.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {interacciones.map((i) => (
-              <li key={i.id} className="bg-card border rounded-lg p-3 text-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded font-semibold">
-                    {TIPO_OPTIONS.find((t) => t.value === i.tipo)?.label ?? i.tipo}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {new Date(i.fecha).toLocaleString("es-MX", {
-                      day: "2-digit",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                {i.resultado && <div className="font-medium">{i.resultado}</div>}
-                {i.notas && (
-                  <p className="text-muted-foreground text-xs mt-1 whitespace-pre-wrap">
-                    {i.notas}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {!sitio.estatus_final && (
         <div className="mt-6">
