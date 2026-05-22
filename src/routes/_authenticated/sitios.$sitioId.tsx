@@ -201,10 +201,10 @@ function SitioDetailPage() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate({ to: "/map" })}
+        onClick={goBack}
         className="mb-3 -ml-2 text-muted-foreground"
       >
-        <ArrowLeft className="h-4 w-4 mr-1" /> Mapa
+        <ArrowLeft className="h-4 w-4 mr-1" /> Regresar
       </Button>
 
       {/* Hero del lead */}
