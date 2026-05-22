@@ -513,9 +513,7 @@ function MapPage() {
                     <span>{Math.round(d)} m</span>
                     <span>·</span>
                     <span className="truncate">
-                      {mine
-                        ? "Tú"
-                        : (sitio.vendedor?.nombre ?? sitio.vendedor?.email ?? "Otro vendedor")}
+                      {vendedorLabel(sitio, user?.id)}
                     </span>
                     {sitio.volumen_m3 != null && (
                       <>
