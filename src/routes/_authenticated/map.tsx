@@ -84,6 +84,7 @@ function MapPage() {
   const [initialView, setInitialView] = useState<{ center: [number, number]; zoom: number } | null>(
     { center: [-103.3496, 20.6597], zoom: 15 },
   );
+  const [recenterNonce, setRecenterNonce] = useState(0);
 
   const locateUser = (showErrors = false) => {
     if (!navigator.geolocation) {
