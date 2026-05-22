@@ -238,10 +238,9 @@ function MapPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todo volumen</SelectItem>
-              <SelectItem value="0-499">&lt; 500 m³</SelectItem>
-              <SelectItem value="500-999">500 – 999 m³</SelectItem>
-              <SelectItem value="1000-4999">1,000 – 4,999 m³</SelectItem>
-              <SelectItem value="5000+">5,000+ m³</SelectItem>
+              <SelectItem value="bajo">0 – 500 m³</SelectItem>
+              <SelectItem value="medio">500 – 3,500 m³</SelectItem>
+              <SelectItem value="alto">3,500 m³ en adelante</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterOwner} onValueChange={setFilterOwner}>
