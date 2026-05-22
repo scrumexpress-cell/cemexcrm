@@ -344,11 +344,7 @@ function MapPage() {
           <div className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center justify-between gap-2">
             <span>
               ⚠ Sitio a {Math.round(nearbyExisting.d)} m de{" "}
-              {nearbyExisting.sitio.vendedor_id === user?.id
-                ? "ti"
-                : (nearbyExisting.sitio.vendedor?.nombre ??
-                  nearbyExisting.sitio.vendedor?.email ??
-                  "otro vendedor")}
+              {vendedorLabel(nearbyExisting.sitio, user?.id, "ti")}
             </span>
             <button
               type="button"
