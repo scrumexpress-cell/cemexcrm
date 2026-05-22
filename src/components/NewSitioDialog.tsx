@@ -164,6 +164,10 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!coords || !user) return;
+    if (!nombre.trim()) {
+      toast.error("Ponle nombre al lead");
+      return;
+    }
     if (!tareaTitulo.trim()) {
       toast.error("Pon un título a la tarea inicial");
       return;
@@ -181,7 +185,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
     const payload = {
       lat: coords.lat,
       lng: coords.lng,
-      nombre_referencia: nombre || null,
+      nombre_referencia: nombre.trim(),
       direccion: direccion || null,
       estatus,
       volumen_m3: rangoVolumen === "alto" ? 5000 : rangoVolumen === "medio" ? 1000 : 100,
@@ -299,7 +303,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium truncate">
-                          {c.nombre_referencia ?? "Sin nombre"}
+                          {c.nombre_referencia?.trim() || c.direccion?.split(",")[0]?.trim() || "Lead cercano"}
                         </span>
                         <span className="text-[10px] tabular-nums text-muted-foreground shrink-0">
                           {Math.round(c.distancia_m)} m
@@ -333,6 +337,7 @@ export function NewSitioDialog({ open, coords, onOpenChange, onCreated }: Props)
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Ej. Obra Av. Lázaro Cárdenas"
+              required
               className="h-10"
             />
           </div>

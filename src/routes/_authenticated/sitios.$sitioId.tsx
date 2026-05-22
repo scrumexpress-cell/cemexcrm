@@ -55,6 +55,14 @@ const TIPO_OPTIONS: { value: InteraccionTipo; label: string }[] = [
   { value: "otro", label: "Otro" },
 ];
 
+function sitioDisplayName(sitio: Sitio): string {
+  const nombre = sitio.nombre_referencia?.trim();
+  if (nombre) return nombre;
+  const direccion = sitio.direccion?.split(",")[0]?.trim();
+  if (direccion && !/^ninguno$/i.test(direccion)) return `Obra ${direccion}`;
+  return `Lead ${sitio.lat.toFixed(4)}, ${sitio.lng.toFixed(4)}`;
+}
+
 function SitioDetailPage() {
   const { sitioId } = Route.useParams();
   const navigate = useNavigate();
@@ -146,11 +154,15 @@ function SitioDetailPage() {
 
   async function saveEdits() {
     if (!sitio) return;
+    if (!nombre.trim()) {
+      toast.error("Ponle nombre al lead");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("sitios")
       .update({
-        nombre_referencia: nombre || null,
+        nombre_referencia: nombre.trim(),
         licitante: licitante.trim() || null,
         direccion: direccion || null,
         estatus,
@@ -264,6 +276,8 @@ function SitioDetailPage() {
           <Input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
+            placeholder={sitioDisplayName(sitio)}
+            required
             className="h-12"
           />
         </div>

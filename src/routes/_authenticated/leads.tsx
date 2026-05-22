@@ -53,6 +53,30 @@ function getEtapa(s: SitioConProfile): SitioEtapa {
   return "en_seguimiento";
 }
 
+function leadDisplayName(s: SitioConProfile): string {
+  const nombre = s.nombre_referencia?.trim();
+  if (nombre) return nombre;
+  const direccion = s.direccion?.split(",")[0]?.trim();
+  if (direccion && !/^ninguno$/i.test(direccion)) return `Obra ${direccion}`;
+  return `Lead ${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`;
+}
+
+function cleanAndDedupeSitios(rows: SitioConProfile[]): SitioConProfile[] {
+  const seen = new Set<string>();
+  return rows.filter((s) => {
+    const key = [
+      leadDisplayName(s).toLowerCase().replace(/\s+/g, " "),
+      (s.direccion ?? "").toLowerCase().replace(/\s+/g, " "),
+      s.volumen_m3 ?? 0,
+      getEtapa(s),
+      s.estatus_final ?? s.estatus,
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function LeadsPage() {
   const { profile } = useAuth();
   const [sitios, setSitios] = useState<SitioConProfile[]>([]);
@@ -82,7 +106,7 @@ function LeadsPage() {
         .order("fecha", { ascending: false }),
     ]);
     if (resSitios.error) toast.error(resSitios.error.message);
-    else setSitios((resSitios.data as SitioConProfile[]) ?? []);
+    else setSitios(cleanAndDedupeSitios((resSitios.data as SitioConProfile[]) ?? []));
     const lastMap: Record<string, string> = {};
     (resInts.data ?? []).forEach((i) => {
       const sid = i.sitio_id as string;
@@ -113,7 +137,7 @@ function LeadsPage() {
         if (filterSeguimiento === "stale30" && d < 30) return false;
       }
       if (q) {
-        const hay = `${s.nombre_referencia ?? ""} ${s.direccion ?? ""} ${
+        const hay = `${leadDisplayName(s)} ${s.direccion ?? ""} ${
           s.licitante ?? ""
         } ${s.notas ?? ""} ${s.profiles?.nombre ?? ""} ${
           s.profiles?.email ?? ""
@@ -389,7 +413,7 @@ function renderCard(s: SitioConProfile, dias: number, mobile: boolean) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <h3 className={`font-semibold truncate ${mobile ? "text-[15px]" : "text-sm"}`}>
-              {s.nombre_referencia ?? "Sitio sin nombre"}
+              {leadDisplayName(s)}
             </h3>
             <span className={`font-bold tabular-nums shrink-0 ${mobile ? "text-sm" : "text-xs"}`}>
               {v.toLocaleString()} m³

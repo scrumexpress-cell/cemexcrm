@@ -30,6 +30,14 @@ type SitioConVendedor = Sitio & {
   vendedor: { nombre: string | null; email: string | null } | null;
 };
 
+function leadDisplayName(s: Pick<Sitio, "nombre_referencia" | "direccion" | "lat" | "lng">): string {
+  const nombre = s.nombre_referencia?.trim();
+  if (nombre) return nombre;
+  const direccion = s.direccion?.split(",")[0]?.trim();
+  if (direccion && !/^ninguno$/i.test(direccion)) return `Obra ${direccion}`;
+  return `Lead ${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`;
+}
+
 // Approx. meters between two coords (haversine)
 function distMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const R = 6371000;
@@ -144,7 +152,7 @@ function MapPage() {
         if (filterVolumen === "alto" && !(v >= 3500)) return false;
       }
       if (q) {
-        const hay = `${s.nombre_referencia ?? ""} ${s.direccion ?? ""} ${
+        const hay = `${leadDisplayName(s)} ${s.direccion ?? ""} ${
           s.licitante ?? ""
         } ${s.vendedor?.nombre ?? ""} ${s.vendedor?.email ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -262,7 +270,7 @@ function MapPage() {
               disabled={seeding}
             >
               <Sparkles className="h-4 w-4 mr-1" />
-              {seeding ? "Cargando..." : "10 ejemplos"}
+              {seeding ? "Cargando..." : "Recargar demo"}
             </Button>
           )}
           <Button
@@ -380,7 +388,7 @@ function MapPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold truncate">
-                {selected.nombre_referencia ?? "Sitio sin nombre"}
+                {leadDisplayName(selected)}
               </h3>
               <p className="text-xs text-muted-foreground truncate">
                 {selected.direccion ?? `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
@@ -472,7 +480,7 @@ function MapPage() {
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="font-medium text-sm truncate">
-                      {sitio.nombre_referencia ?? "Sitio sin nombre"}
+                      {leadDisplayName(sitio)}
                     </div>
                     <Badge
                       variant="outline"

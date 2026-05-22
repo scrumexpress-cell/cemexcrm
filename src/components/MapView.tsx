@@ -318,6 +318,7 @@ export function MapView({
         }
 
         const sitio = m.data;
+        const sitioName = sitio.nombre_referencia?.trim() || sitio.direccion?.split(",")[0]?.trim() || "Sitio";
         const isMine = currentUserId != null && sitio.vendedor_id === currentUserId;
         const Icon = ESTATUS_ICON[sitio.estatus];
         return (
@@ -325,8 +326,8 @@ export function MapView({
             key={sitio.id}
             type="button"
             data-map-marker
-            aria-label={sitio.nombre_referencia ?? "Sitio"}
-            title={`${sitio.nombre_referencia ?? "Sitio sin nombre"} · ${ESTATUS_LABEL[sitio.estatus]}`}
+            aria-label={sitioName}
+            title={`${sitioName} · ${ESTATUS_LABEL[sitio.estatus]}`}
             className="absolute z-20 flex items-center justify-center rounded-full border-2 border-card shadow-lg transition-transform active:scale-90"
             style={{
               left: pos.x,
