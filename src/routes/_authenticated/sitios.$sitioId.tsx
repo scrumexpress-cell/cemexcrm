@@ -91,7 +91,7 @@ function SitioDetailPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: s }, { data: fs }, { data: ints }] = await Promise.all([
+    const [{ data: s, error: sErr }, { data: fs }, { data: ints }] = await Promise.all([
       supabase.from("sitios").select("*").eq("id", sitioId).maybeSingle(),
       supabase.from("fotos").select("*").eq("sitio_id", sitioId),
       supabase
@@ -100,6 +100,9 @@ function SitioDetailPage() {
         .eq("sitio_id", sitioId)
         .order("fecha", { ascending: false }),
     ]);
+    if (sErr) {
+      toast.error(`No se pudo cargar el sitio: ${sErr.message}`);
+    }
     if (s) {
       const sitio = s as Sitio;
       setSitio(sitio);
@@ -108,6 +111,8 @@ function SitioDetailPage() {
       setDireccion(sitio.direccion ?? "");
       setEstatus(sitio.estatus);
       setVolumen(sitio.volumen_m3?.toString() ?? "");
+    } else {
+      setSitio(null);
     }
     if (fs) {
       const withUrls = (fs as Foto[]).map((f) => ({
