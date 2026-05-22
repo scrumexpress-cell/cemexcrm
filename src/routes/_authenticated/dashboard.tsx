@@ -361,7 +361,7 @@ function DashboardPage() {
           </div>
 
           {/* Revenue trend hero */}
-          <div className="bg-card border rounded-2xl p-5 mb-4">
+          <div className="bg-card border rounded-2xl p-4 sm:p-5 mb-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-sm">Ingreso ganado por mes</h2>
@@ -411,7 +411,7 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Ganados vs Perdidos */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Ganados vs perdidos</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Volumen de cierres mensuales
@@ -439,7 +439,7 @@ function DashboardPage() {
             </div>
 
             {/* Win rate trend */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Tendencia de win rate</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 % de oportunidades cerradas como ganadas
@@ -480,7 +480,7 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Embudo */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Embudo por etapa</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Donde se concentra el volumen
@@ -509,7 +509,7 @@ function DashboardPage() {
             </div>
 
             {/* Pipeline por estatus de obra */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Mix de pipeline</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Estatus actual de las obras abiertas
@@ -548,7 +548,7 @@ function DashboardPage() {
 
           {/* Top performers */}
           {topVendedores.length > 0 && (
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-3">Top vendedores por ingreso ganado</h2>
               <div className="space-y-2">
                 {topVendedores.map((v, i) => {
@@ -581,7 +581,7 @@ function DashboardPage() {
           )}
 
           {licitaciones.length > 0 && (
-            <div className="bg-card border rounded-2xl p-5 mt-4">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5 mt-4">
               <h2 className="font-semibold text-sm mb-1">Licitaciones activas</h2>
               <p className="text-[11px] text-muted-foreground mb-4">
                 Obras con varios licitantes — quién atendió y resultado final
