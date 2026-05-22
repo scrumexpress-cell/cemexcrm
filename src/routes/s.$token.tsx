@@ -59,14 +59,14 @@ function SharedSitioPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+      <div className="min-h-dvh flex items-center justify-center text-sm text-muted-foreground">
         Cargando...
       </div>
     );
   }
   if (error || !sitio) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 text-center">
+      <div className="min-h-dvh flex items-center justify-center px-4 text-center">
         <div>
           <h1 className="text-lg font-semibold">Link no disponible</h1>
           <p className="text-sm text-muted-foreground mt-2">
@@ -78,7 +78,7 @@ function SharedSitioPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-dvh flex flex-col bg-background">
       <header className="bg-primary text-primary-foreground px-4 py-3">
         <h1 className="font-semibold">CEMEX Sites — Vista compartida</h1>
         <p className="text-[11px] opacity-80">Solo lectura</p>

@@ -285,27 +285,28 @@ function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 px-6 py-6 max-w-7xl w-full mx-auto">
-      <div className="flex items-end justify-between mb-1 gap-4 flex-wrap">
+    <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6 max-w-7xl w-full mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-1">
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Tablero ejecutivo
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline &amp; PnL</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Pipeline &amp; PnL</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Precio m³</span>
             <input
               type="number"
+              inputMode="numeric"
               value={precio}
               onChange={(e) => setPrecio(Number(e.target.value) || 0)}
-              className="w-24 h-8 px-2 rounded-md border bg-background text-sm tabular-nums"
+              className="w-20 sm:w-24 h-9 px-2 rounded-md border bg-background text-sm tabular-nums"
             />
             <span className="text-muted-foreground">MXN</span>
           </div>
           <Select value={horizonte} onValueChange={(v) => setHorizonte(v as "6" | "12")}>
-            <SelectTrigger className="h-8 w-[110px] text-xs">
+            <SelectTrigger className="h-9 w-[110px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -313,15 +314,16 @@ function DashboardPage() {
               <SelectItem value="12">Últimos 12 m</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading}>
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={loading} className="h-9">
             <Download className="h-4 w-4 mr-1" /> CSV
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mb-6">
+      <p className="text-xs text-muted-foreground mb-4 sm:mb-6">
         {profile?.role === "head" ? "Visión global" : "Tu zona"} · datos en MXN sobre supuesto de
         ${precio.toLocaleString()}/m³
       </p>
+
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
@@ -359,7 +361,7 @@ function DashboardPage() {
           </div>
 
           {/* Revenue trend hero */}
-          <div className="bg-card border rounded-2xl p-5 mb-4">
+          <div className="bg-card border rounded-2xl p-4 sm:p-5 mb-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="font-semibold text-sm">Ingreso ganado por mes</h2>
@@ -373,22 +375,22 @@ function DashboardPage() {
                 <AreaChart data={serieMes} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gIng" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
                   <YAxis
                     tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
+                    stroke="var(--muted-foreground)"
                     tickFormatter={(v) => MXN(Number(v))}
                     width={60}
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
                       borderRadius: 8,
                       fontSize: 12,
                     }}
@@ -397,7 +399,7 @@ function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="ingreso"
-                    stroke="hsl(var(--primary))"
+                    stroke="var(--primary)"
                     strokeWidth={2}
                     fill="url(#gIng)"
                     name="Ingreso"
@@ -409,7 +411,7 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Ganados vs Perdidos */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Ganados vs perdidos</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Volumen de cierres mensuales
@@ -417,19 +419,19 @@ function DashboardPage() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={serieMes} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
-                    <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
                     <Tooltip
                       contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
                         borderRadius: 8,
                         fontSize: 12,
                       }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="ganados" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Ganados" />
+                    <Bar dataKey="ganados" fill="var(--primary)" radius={[4, 4, 0, 0]} name="Ganados" />
                     <Bar dataKey="perdidos" fill="#E1251B" radius={[4, 4, 0, 0]} name="Perdidos" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -437,7 +439,7 @@ function DashboardPage() {
             </div>
 
             {/* Win rate trend */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Tendencia de win rate</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 % de oportunidades cerradas como ganadas
@@ -445,18 +447,18 @@ function DashboardPage() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={winTrend} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
-                    <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
                     <YAxis
                       tick={{ fontSize: 11 }}
-                      stroke="hsl(var(--muted-foreground))"
+                      stroke="var(--muted-foreground)"
                       domain={[0, 100]}
                       tickFormatter={(v) => `${v}%`}
                     />
                     <Tooltip
                       contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
                         borderRadius: 8,
                         fontSize: 12,
                       }}
@@ -465,7 +467,7 @@ function DashboardPage() {
                     <Line
                       type="monotone"
                       dataKey="winRate"
-                      stroke="hsl(var(--primary))"
+                      stroke="var(--primary)"
                       strokeWidth={2.5}
                       dot={{ r: 3 }}
                       connectNulls
@@ -478,7 +480,7 @@ function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Embudo */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Embudo por etapa</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Donde se concentra el volumen
@@ -507,7 +509,7 @@ function DashboardPage() {
             </div>
 
             {/* Pipeline por estatus de obra */}
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-1">Mix de pipeline</h2>
               <p className="text-[11px] text-muted-foreground mb-3">
                 Estatus actual de las obras abiertas
@@ -546,7 +548,7 @@ function DashboardPage() {
 
           {/* Top performers */}
           {topVendedores.length > 0 && (
-            <div className="bg-card border rounded-2xl p-5">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5">
               <h2 className="font-semibold text-sm mb-3">Top vendedores por ingreso ganado</h2>
               <div className="space-y-2">
                 {topVendedores.map((v, i) => {
@@ -579,7 +581,7 @@ function DashboardPage() {
           )}
 
           {licitaciones.length > 0 && (
-            <div className="bg-card border rounded-2xl p-5 mt-4">
+            <div className="bg-card border rounded-2xl p-4 sm:p-5 mt-4">
               <h2 className="font-semibold text-sm mb-1">Licitaciones activas</h2>
               <p className="text-[11px] text-muted-foreground mb-4">
                 Obras con varios licitantes — quién atendió y resultado final
@@ -705,7 +707,7 @@ function Kpi({
         </div>
         <Icon className={`h-4 w-4 ${primary ? "opacity-80" : "text-muted-foreground"}`} />
       </div>
-      <div className="text-2xl font-semibold tabular-nums mt-2 tracking-tight">{value}</div>
+      <div className="text-xl sm:text-2xl font-semibold tabular-nums mt-2 tracking-tight break-words">{value}</div>
       <div className="flex items-center gap-1.5 mt-1">
         {delta !== undefined && (
           <span
