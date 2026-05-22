@@ -245,7 +245,7 @@ function NuevoSitioPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium truncate text-sm">
-                        {c.nombre_referencia ?? "Sin nombre"}
+                        {c.nombre_referencia?.trim() || c.direccion?.split(",")[0]?.trim() || "Lead cercano"}
                       </span>
                       <span className="text-[10px] tabular-nums text-muted-foreground shrink-0">
                         {Math.round(c.distancia_m)} m
