@@ -64,6 +64,7 @@ export function MapView({
   onMapClick,
   center = GDL,
   zoom = 11,
+  recenterNonce,
   className,
   draggableMarker,
   onMarkerDrag,
@@ -87,7 +88,7 @@ export function MapView({
   useEffect(() => {
     setView({ lng: center[0], lat: center[1], zoom });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center[0], center[1], zoom]);
+  }, [center[0], center[1], zoom, recenterNonce]);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [showHeat] = useState(false);
   const [showPlants] = useState(false);
