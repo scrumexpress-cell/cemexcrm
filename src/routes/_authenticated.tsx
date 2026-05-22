@@ -140,22 +140,31 @@ function AuthLayout() {
     return (
       <Link
         to={to}
-        className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium ${
-          active ? "text-primary" : "text-muted-foreground"
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 text-xs font-medium transition-colors ${
+          active ? "text-primary" : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        <span className="relative inline-flex">
-          <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+        <span
+          className={`relative inline-flex items-center justify-center h-8 w-12 rounded-full transition-colors ${
+            active ? "bg-primary/10" : ""
+          }`}
+        >
+          <Icon
+            className="h-[22px] w-[22px]"
+            strokeWidth={active ? 2.4 : 1.8}
+            {...(active ? { fill: "currentColor", fillOpacity: 0.12 } : {})}
+          />
           {badge ? (
-            <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-card">
               {badge > 99 ? "99+" : badge}
             </span>
           ) : null}
         </span>
-        <span>{label}</span>
+        <span className={active ? "font-semibold" : ""}>{label}</span>
       </Link>
     );
   };
+
 
   return (
     <div className="h-dvh flex flex-col bg-background">
