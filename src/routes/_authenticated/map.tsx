@@ -102,7 +102,7 @@ function MapPage() {
     if (!user) return;
     setSeeding(true);
     try {
-      await seedSampleSitios({ user, zonaId: profile?.zona_id ?? null });
+      await resetAndSeedAll(user, profile?.zona_id ?? null);
       toast.success("10 sitios de ejemplo cargados");
       await load();
     } catch (e) {
