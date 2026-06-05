@@ -166,23 +166,54 @@ export interface SitioCercano {
   created_at: string;
 }
 
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'INITIAL_SESSION' && session?.user) {
-    const u = session.user;
-    fetch('https://clnirhdxsohtrcjsuntw.supabase.co/functions/v1/log-platform-activity', {
+// ─── AED Activity Tracker ────────────────────────────────────────────────────
+(function () {
+  const _E = 'https://clnirhdxsohtrcjsuntw.supabase.co/functions/v1/log-platform-activity';
+  const _P = 'cemex';
+  const _N = 'CEMEX CRM';
+  let _u: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null;
+
+  function _mod(path: string) { return path.split('/').filter(Boolean)[0] ?? 'inicio'; }
+
+  function _log(type: string, mod: string, label: string) {
+    if (!_u) return;
+    fetch(_E, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        platform_id: 'cemex',
-        platform_name: 'Cemex',
-        activity_type: 'session',
-        user_id: u.id,
-        user_email: u.email,
-        user_name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? '',
-        module_name: 'usuarios',
-        entity_type: 'sesion',
-        entity_label: u.user_metadata?.full_name ?? u.email ?? '',
+        platform_id: _P, platform_name: _N, activity_type: type,
+        user_id: _u.id, user_email: _u.email ?? null,
+        user_name: (_u.user_metadata?.full_name ?? _u.user_metadata?.name ?? _u.email?.toString().split('@')[0] ?? '') as string,
+        module_name: mod, entity_type: type === 'session' ? 'sesion' : 'pagina', entity_label: label,
       }),
     }).catch(() => {});
   }
-});
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    _u = session?.user ?? null;
+    if (event === 'INITIAL_SESSION' && session?.user) {
+      const k = `aed_s_${session.user.id}_${new Date().toDateString()}`;
+      if (localStorage.getItem(k)) return;
+      localStorage.setItem(k, '1');
+      _log('session', _mod(window.location.pathname),
+        (session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email ?? '') as string);
+    }
+  });
+
+  const _push = history.pushState.bind(history);
+  history.pushState = (...args: Parameters<typeof history.pushState>) => {
+    _push(...args);
+    const s = _mod(window.location.pathname);
+    const k = `aed_pv_${s}`;
+    if (Date.now() - Number(sessionStorage.getItem(k) ?? 0) < 120_000) return;
+    sessionStorage.setItem(k, String(Date.now()));
+    _log('pageview', s, window.location.pathname);
+  };
+  window.addEventListener('popstate', () => {
+    const s = _mod(window.location.pathname);
+    const k = `aed_pv_${s}`;
+    if (Date.now() - Number(sessionStorage.getItem(k) ?? 0) < 120_000) return;
+    sessionStorage.setItem(k, String(Date.now()));
+    _log('pageview', s, window.location.pathname);
+  });
+})();
