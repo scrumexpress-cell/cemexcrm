@@ -165,3 +165,24 @@ export interface SitioCercano {
   distancia_m: number;
   created_at: string;
 }
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'INITIAL_SESSION' && session?.user) {
+    const u = session.user;
+    fetch('https://clnirhdxsohtrcjsuntw.supabase.co/functions/v1/log-platform-activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform_id: 'cemex',
+        platform_name: 'Cemex',
+        activity_type: 'session',
+        user_id: u.id,
+        user_email: u.email,
+        user_name: u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? '',
+        module_name: 'usuarios',
+        entity_type: 'sesion',
+        entity_label: u.user_metadata?.full_name ?? u.email ?? '',
+      }),
+    }).catch(() => {});
+  }
+});
