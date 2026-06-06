@@ -175,29 +175,73 @@ export interface SitioCercano {
 
   function _mod(path: string) { return path.split('/').filter(Boolean)[0] ?? 'inicio'; }
 
-  function _log(type: string, mod: string, label: string) {
-    if (!_u) return;
-    fetch(_E, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform_id: _P, platform_name: _N, activity_type: type,
-        user_id: _u.id, user_email: _u.email ?? null,
-        user_name: (_u.user_metadata?.full_name ?? _u.user_metadata?.name ?? _u.email?.toString().split('@')[0] ?? '') as string,
-        module_name: mod, entity_type: type === 'session' ? 'sesion' : 'pagina', entity_label: label,
-      }),
-    }).catch(() => {});
+
+  function _src() {
+
+
+    if (window.matchMedia('(display-mode: standalone)').matches) return 'pwa';
+
+
+    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) return 'mobile';
+
+
+    return 'web';
+
+
   }
 
-  supabase.auth.onAuthStateChange((event, session) => {
-    _u = session?.user ?? null;
-    if (event === 'INITIAL_SESSION' && session?.user) {
-      const k = `aed_s_${session.user.id}_${new Date().toDateString()}`;
-      if (localStorage.getItem(k)) return;
-      localStorage.setItem(k, '1');
-      _log('session', _mod(window.location.pathname),
-        (session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? session.user.email ?? '') as string);
-    }
+
+  function _flag(cc: string) {
+
+
+    return cc.toUpperCase().replace(/./g, c => String.fromCodePoint(0x1F1E6 - 65 + c.charCodeAt(0)));
+
+
+  }
+
+
+  let _geo: { city?: string; country?: string; flag?: string } = {};
+
+
+  fetch('https://ipapi.co/json/').then(r => r.json()).then(d => {
+
+
+    _geo = { city: d.city, country: d.country_code, flag: _flag(d.country_code ?? '') };
+
+
+  }).catch(() => {});
+
+
+  function _log(type: string, mod: string, label: string) {
+
+
+    if (!_u) return;
+
+
+    fetch(_E, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+
+
+      body: JSON.stringify({ platform_id: _P, platform_name: _N, activity_type: type,
+
+
+        user_id: _u.id, user_email: _u.email ?? null,
+
+
+        user_name: (_u.user_metadata?.full_name ?? _u.user_metadata?.name ?? _u.email?.toString().split('@')[0] ?? '') as string,
+
+
+        module_name: mod, entity_type: type === 'session' ? 'sesion' : 'pagina', entity_label: label,
+
+
+        metadata: { source: _src(), ..._geo },
+
+
+      }),
+
+
+    }).catch(() => {});
+
+
   });
 
   const _push = history.pushState.bind(history);
