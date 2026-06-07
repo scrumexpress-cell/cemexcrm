@@ -97,6 +97,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="es">
       <head>
         <HeadContent />
+        <script src="https://clnirhdxsohtrcjsuntw.supabase.co/functions/v1/tracker-js?pid=cemex      </head>pname=CEMEX" defer={true}></script>
       </head>
       <body style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
         {children}
